@@ -275,15 +275,17 @@ int uart_rx(int ch, void *p, size_t n, uint16_t timeout_ms) {
 }
 
 void uart_flush(int ch) {
-	if(ch != UART_SENSOR_CH)
-		return;
-	/* TODO */
+	if(ch == UART_SENSOR_CH) {
+		nvic_disable_irq(NVIC_USART1_IRQ);
+		rx_put = rx_get = 0;
+		nvic_enable_irq(NVIC_USART1_IRQ);
+	}
 }
 
 void spi_tx(const void *p, size_t n) {
 	const uint8_t *d=p;
 	for(;n;n--,d++)
-		spi_send(SPI1, *d);
+		spi_send8(SPI1, *d);
 }
 
 void hw_init(int argc, char **argv) {
