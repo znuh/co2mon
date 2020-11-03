@@ -136,9 +136,63 @@ static void i2c_setup(void) {
 	i2c_peripheral_enable(I2C1);
 }
 
-int i2c_xfer(uint8_t addr, const void *wr_p, size_t wr_sz, void *rd_p, size_t rd_sz) {
-	/* TODO */
+static int i2c_start(uint8_t addr) {
+	/* TBD */
 	return 0;
+}
+
+static void i2c_stop(void) {
+	/* TBD */
+}
+
+static int i2c_sendbyte(uint8_t b) {
+	/* TBD */
+	return 0;
+}
+
+static int i2c_rcvbyte(uint8_t *d, uint8_t ack) {
+	/* TBD */
+	return 0;
+}
+
+#define I2C_READ    1
+#define I2C_WRITE   0
+
+int i2c_xfer(uint8_t addr, const void *wr_p, size_t wr_sz, void *rd_p, size_t rd_sz) {
+	const uint8_t *wr_d = wr_p;
+	uint8_t *rd_d = rd_p;
+	int n=0;
+
+	/* write cycle */
+	if((wr_d) && (wr_sz>0)) {
+		int res = i2c_start((addr<<1)|I2C_WRITE);
+		if(!res)
+			goto out;
+		for(;wr_sz;wr_sz--,wr_d++) {
+			res = i2c_sendbyte(*wr_d);
+			if(!res)
+				goto out;
+		}
+		/* not stop here b/c repeated start follows or stop before function return */
+		n++;
+	}
+
+	/* read cycle */
+	if((rd_d) && (rd_sz>0)) {
+		int res = i2c_start((addr<<1)|I2C_READ);
+		if(!res)
+			goto out;
+		for(;rd_sz;rd_sz--,rd_d++) {
+			res = i2c_rcvbyte(rd_d, rd_sz > 1);
+			if(!res)
+				goto out;
+		}
+		n++;
+	}
+
+out:
+	i2c_stop();
+	return n;
 }
 
 static uint32_t uart1_baudrate = 9600;
