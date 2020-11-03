@@ -11,6 +11,25 @@
 #include <stdint.h>
 #include <inttypes.h>
 
+/* IO assignments:
+ * 
+ * PA1 :          ~TFT_CS
+ * PA2 : TX2      MCU_TX2
+ * PA3 : RX2      MCU_RX2
+ * PA5 : SCK      TFT_CLK
+ * PA7 : MOSI     TFT_DATA
+ * PA9 : TX1      TXD_S - to sensor
+ * PA10: RX1      RXD_S - from sensor
+ * PA11: USB_DM
+ * PA12: USB_DP
+ * 
+ * PB6 : SCL
+ * PB7 : SDA
+ * 
+ * PF0 :          ~TFT_RST
+ * PF1 :          TFT_A0
+ */
+
 #define HZ      100
 #define MSEC    (1000/HZ)
 #define SEC     (1000*MSEC)
