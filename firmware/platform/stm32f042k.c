@@ -90,7 +90,7 @@ static void wait_until(uint32_t ts) {
 }
 
 void msleep(uint16_t val) {
-	wait_until(jiffies + ((val+(MSEC-1))/MSEC));
+	wait_until(jiffies + ((val+(MSEC-1))/MSEC) + 1);
 }
 
 #if 0

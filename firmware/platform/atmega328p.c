@@ -51,7 +51,7 @@ ISR(TIMER1_OVF_vect) {
 void msleep(uint16_t val) {
 	val+=3; /* round up */
 	val>>=2;
-	val+=t1ovf;
+	val+=t1ovf+1;
 	while(val < t1ovf) /* uint16 rollover case */
 		sleep_cpu();
 	while(t1ovf < val)
