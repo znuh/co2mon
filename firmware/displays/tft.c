@@ -31,6 +31,10 @@ enum {
 	MODE_UNDEF   = 0xff
 };
 
+void    tft_init(void);
+uint8_t tft_update(readings_t *vals);
+uint8_t tft_showtext(char **lines, uint8_t n);
+
 static inline void tft_mode(uint8_t new_mode) {
 	static uint8_t current_mode = MODE_UNDEF;
 	if(current_mode != new_mode) {

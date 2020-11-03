@@ -29,6 +29,10 @@ typedef struct display_ctx_s {
 
 static display_ctx_t disp;
 
+uint8_t oled_init(void);
+uint8_t oled_update(readings_t *vals);
+uint8_t oled_showtext(char **lines, uint8_t n);
+
 static int cmd(uint8_t cmd) {
 	uint8_t txbuf[] = {SSD1306_CTL_CMD, cmd};
 	return i2c_xfer(SSD1306_I2C_ADDR, txbuf, sizeof(txbuf), NULL, 0);

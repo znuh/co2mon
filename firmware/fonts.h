@@ -31,8 +31,8 @@ typedef struct font_s {
 	const uint8_t char_ofs;
 } font_t;
 
-const char font_digits[13];
-const font_t fonts[MAX_FONTS];
+extern const char font_digits[13];
+extern const font_t fonts[MAX_FONTS];
 
 uint8_t font_index(const font_t *f, char c);
 
