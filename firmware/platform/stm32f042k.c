@@ -197,7 +197,7 @@ int uart_rx(int ch, void *p, size_t n, uint16_t timeout_ms) {
 		return 0;
 
 	timeout+=(MSEC>>1); /* round up */
-	timeout/=10;
+	timeout/=MSEC;
 	timeout+=jiffies;
 
 	while(((unsigned)res<n) && (jiffies != timeout)) { /* TODO: more robust jiffies rollover handling? */
