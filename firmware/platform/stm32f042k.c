@@ -128,7 +128,10 @@ static void spi_setup(void) {
 }
 
 static void i2c_setup(void) {
+	rcc_set_i2c_clock_sysclk(I2C1);
 	i2c_peripheral_disable(I2C1);
+	i2c_enable_analog_filter(I2C1);
+	i2c_set_digital_filter(I2C1, 0);
 	i2c_set_speed(I2C1, i2c_speed_sm_100k, 48);
 	i2c_peripheral_enable(I2C1);
 }
