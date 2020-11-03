@@ -3,6 +3,7 @@
 #include <libopencm3/stm32/gpio.h>
 #include <libopencm3/stm32/spi.h>
 #include <libopencm3/stm32/i2c.h>
+#include <libopencm3/stm32/usart.h>
 
 #include <libopencmsis/core_cm3.h>
 
@@ -44,7 +45,7 @@ static inline void spi_busywait(uint32_t spi) {
 void gpio_setval(uint8_t gpio_id, uint8_t val) {
 	if(gpio_id >= GPIO_INVALID)
 		return;
-	spi_busywait(SPI1);
+	spi_busywait(SPI1); /* ensure previous tft write has finished */
 	if(val)
 		gpio_set(gpio_map[gpio_id][0], gpio_map[gpio_id][1]);
 	else
@@ -126,27 +127,56 @@ static void spi_setup(void) {
 }
 
 static void i2c_setup(void) {
-}
-
-static void uart_setup(void) {
+	/* TODO */
 }
 
 int i2c_xfer(uint8_t addr, const void *wr_p, size_t wr_sz, void *rd_p, size_t rd_sz) {
+	/* TODO */
 	return 0;
 }
 
+static uint32_t uart1_baudrate = 9600;
+
+static void uart_setup(void) {
+	usart_set_baudrate(USART1, uart1_baudrate);
+	usart_set_databits(USART1, 8);
+	usart_set_parity(USART1, USART_PARITY_NONE);
+	usart_set_stopbits(USART1, USART_CR2_STOPBITS_1);
+	usart_set_mode(USART1, USART_MODE_TX);
+	usart_set_flow_control(USART1, USART_FLOWCONTROL_NONE);
+	usart_enable(USART1);
+	/* TODO: RX interrupt */
+}
+
 void uart_config(int ch, uint32_t baudrate) {
+	if(ch != UART_SENSOR_CH)
+		return;
+	if(baudrate == uart1_baudrate)
+		return;
+	uart1_baudrate = baudrate;
+	usart_set_baudrate(USART1, uart1_baudrate);
 }
 
 int uart_tx(int ch, const void *p, size_t n) {
+	const uint8_t *d=p;
+	if(ch != UART_SENSOR_CH)
+		return n;
+	for(;n;n--,d++)
+		usart_send_blocking(USART1, *d);
 	return n;
 }
 
 int uart_rx(int ch, void *p, size_t n, uint16_t timeout_ms) {
+	if(ch != UART_SENSOR_CH)
+		return 0;
+	/* TODO */
 	return 0;
 }
 
 void uart_flush(int ch) {
+	if(ch != UART_SENSOR_CH)
+		return;
+	/* TODO */
 }
 
 void spi_tx(const void *p, size_t n) {
