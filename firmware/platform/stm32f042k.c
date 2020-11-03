@@ -62,6 +62,7 @@ static void gpio_setup(void) {
 
 	/* ~TFT_CS */
 	gpio_mode_setup(GPIOA, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO1);
+	gpio_set_output_options(GPIOA, GPIO_OTYPE_PP, GPIO_OSPEED_25MHZ, GPIO1);
 	gpio_set(GPIOA, GPIO1);
 
 	/* I2C1 */
@@ -71,7 +72,7 @@ static void gpio_setup(void) {
 	/* TFT nRST, A0 */
 	gpio_mode_setup(GPIOF, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO0 | GPIO1);
 	gpio_set_output_options(GPIOF, GPIO_OTYPE_PP, GPIO_OSPEED_25MHZ, GPIO0 | GPIO1);
-	gpio_clear(GPIOA, GPIO1|GPIO0);
+	gpio_clear(GPIOF, GPIO1|GPIO0);
 }
 
 #define HZ      100
