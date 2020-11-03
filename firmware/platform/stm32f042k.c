@@ -84,6 +84,7 @@ void sys_tick_handler(void) {
 }
 
 static void wait_until(uint32_t ts) {
+	while(ts < jiffies) { __WFI(); } /* uint32 rollover case */
 	while(jiffies < ts) { __WFI(); }
 }
 
