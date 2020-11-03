@@ -119,7 +119,8 @@ static void systick_setup(void) {
 
 static void spi_setup(void) {
 	spi_reset(SPI1);
-	spi_init_master(SPI1, SPI_CR1_BAUDRATE_FPCLK_DIV_8, SPI_CR1_CPOL_CLK_TO_0_WHEN_IDLE, 
+	/* ST7735S TSCYCW: min 66ns (~16MHz), so 48MHz/4=12MHz should be fine */
+	spi_init_master(SPI1, SPI_CR1_BAUDRATE_FPCLK_DIV_4, SPI_CR1_CPOL_CLK_TO_0_WHEN_IDLE, 
 		SPI_CR1_CPHA_CLK_TRANSITION_1, SPI_CR1_MSBFIRST);
 	spi_enable_software_slave_management(SPI1);
 	spi_set_nss_high(SPI1);
@@ -127,7 +128,9 @@ static void spi_setup(void) {
 }
 
 static void i2c_setup(void) {
-	/* TODO */
+	i2c_peripheral_disable(I2C1);
+	i2c_set_speed(I2C1, i2c_speed_sm_100k, 48);
+	i2c_peripheral_enable(I2C1);
 }
 
 int i2c_xfer(uint8_t addr, const void *wr_p, size_t wr_sz, void *rd_p, size_t rd_sz) {
@@ -142,10 +145,11 @@ static void uart_setup(void) {
 	usart_set_databits(USART1, 8);
 	usart_set_parity(USART1, USART_PARITY_NONE);
 	usart_set_stopbits(USART1, USART_CR2_STOPBITS_1);
-	usart_set_mode(USART1, USART_MODE_TX);
+	usart_set_mode(USART1, USART_MODE_TX_RX);
 	usart_set_flow_control(USART1, USART_FLOWCONTROL_NONE);
+    nvic_enable_irq(NVIC_USART1_IRQ);
+	USART_CR1(USART1) |= USART_CR1_RXNEIE;
 	usart_enable(USART1);
-	/* TODO: RX interrupt */
 }
 
 void uart_config(int ch, uint32_t baudrate) {
@@ -166,11 +170,50 @@ int uart_tx(int ch, const void *p, size_t n) {
 	return n;
 }
 
+#define RXBUF_SIZE      32
+
+static volatile uint8_t rxbuf[RXBUF_SIZE];
+static volatile uint32_t rx_put = 0;
+static volatile uint32_t rx_get = 0;
+
+void usart1_isr(void) {
+	if (USART_ISR(USART1) & USART_ISR_RXNE) {
+		uint8_t d = usart_recv(USART1);
+		rxbuf[rx_put++]=d;
+		rx_put&=(RXBUF_SIZE-1);
+		if(rx_put == rx_get) { /* ringbuffer overrun - drop oldest byte */
+			rx_get++;
+			rx_get&=(RXBUF_SIZE-1);
+		}
+	}
+}
+
 int uart_rx(int ch, void *p, size_t n, uint16_t timeout_ms) {
-	if(ch != UART_SENSOR_CH)
+	uint32_t put, get, timeout=timeout_ms;
+	int res=0, can_read;
+	uint8_t *d=p;
+
+	if(ch != UART_SENSOR_CH) /* not (yet) implemented */
 		return 0;
-	/* TODO */
-	return 0;
+
+	timeout+=(MSEC>>1); /* round up */
+	timeout/=10;
+	timeout+=jiffies;
+
+	while(((unsigned)res<n) && (jiffies != timeout)) { /* TODO: more robust jiffies rollover handling? */
+		nvic_disable_irq(NVIC_USART1_IRQ);
+		put=rx_put; get=rx_get;
+		can_read = (get != put);
+		if(can_read) {
+			*d = rxbuf[get++];
+			get&=(RXBUF_SIZE-1);
+			rx_get = get;
+		}
+		nvic_enable_irq(NVIC_USART1_IRQ);
+		res+=can_read;
+		d+=can_read;
+	}
+	return res;
 }
 
 void uart_flush(int ch) {
