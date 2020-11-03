@@ -83,8 +83,8 @@ static void serial_printvals(readings_t *v) {
 }
 
 /* TODOs:
- * - AVR: better handling for timer rollover
  * - STM32 support
+ * - AVR/STM32: better handling for timer rollover in uart_rx
  * - better OLED digits
  */
 int main(int argc, char **argv) {
