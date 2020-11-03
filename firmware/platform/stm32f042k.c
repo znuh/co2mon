@@ -2,6 +2,7 @@
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/stm32/gpio.h>
 #include <libopencm3/stm32/spi.h>
+#include <libopencm3/stm32/i2c.h>
 
 #include <libopencmsis/core_cm3.h>
 
@@ -13,22 +14,64 @@
 
 /* IO assignments:
  * 
- * PA1 :          ~TFT_CS
- * PA2 : TX2      MCU_TX2
- * PA3 : RX2      MCU_RX2
- * PA5 : SCK      TFT_CLK
- * PA7 : MOSI     TFT_DATA
- * PA9 : TX1      TXD_S - to sensor
- * PA10: RX1      RXD_S - from sensor
- * PA11: USB_DM
+ * PA1 :             ~TFT_CS
+ * PA2 : TX2     AF1 MCU_TX2   - RFU
+ * PA3 : RX2     AF1 MCU_RX2   - RFU
+ * PA5 : SCK     AF0 TFT_CLK
+ * PA7 : MOSI    AF0 TFT_DATA
+ * PA9 : TX1     AF1 TXD_S - to sensor
+ * PA10: RX1     AF1 RXD_S - from sensor
+ * PA11: USB_DM  
  * PA12: USB_DP
  * 
- * PB6 : SCL
- * PB7 : SDA
+ * PB6 : SCL     AF1
+ * PB7 : SDA     AF1
  * 
- * PF0 :          ~TFT_RST
- * PF1 :          TFT_A0
+ * PF0 :             ~TFT_RST
+ * PF1 :             TFT_A0
  */
+
+static const uint32_t gpio_map[3][2] = {
+	{GPIOA, GPIO1},  /* GPIO_TFT_NCS   */
+	{GPIOF, GPIO0},  /* GPIO_TFT_NRST  */
+	{GPIOF, GPIO1}   /* GPIO_TFT_A0 */
+};
+
+static inline void spi_busywait(uint32_t spi) {
+	while ((SPI_SR(spi) & SPI_SR_BSY));
+}
+
+void gpio_setval(uint8_t gpio_id, uint8_t val) {
+	if(gpio_id >= GPIO_INVALID)
+		return;
+	spi_busywait(SPI1);
+	if(val)
+		gpio_set(gpio_map[gpio_id][0], gpio_map[gpio_id][1]);
+	else
+		gpio_clear(gpio_map[gpio_id][0], gpio_map[gpio_id][1]);
+}
+
+static void gpio_setup(void) {
+	gpio_mode_setup(GPIOA, GPIO_MODE_AF, GPIO_PUPD_PULLUP, GPIO3 | GPIO10);          /* RXDs */
+	gpio_mode_setup(GPIOA, GPIO_MODE_AF, GPIO_PUPD_NONE,   GPIO5 | GPIO7 | GPIO9);   /* UART1, SPI1 */
+	gpio_set_output_options(GPIOA, GPIO_OTYPE_PP, GPIO_OSPEED_2MHZ, GPIO9);          /* TXD1 */
+	gpio_set_output_options(GPIOA, GPIO_OTYPE_PP, GPIO_OSPEED_25MHZ, GPIO5 | GPIO7); /* SPI1 */
+	gpio_set_af(GPIOA, GPIO_AF1, GPIO9|GPIO10); /* UART1 */
+	gpio_set_af(GPIOA, GPIO_AF0, GPIO5|GPIO7);  /* SPI1  */
+
+	/* ~TFT_CS */
+	gpio_mode_setup(GPIOA, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO1);
+	gpio_set(GPIOA, GPIO1);
+
+	/* I2C1 */
+	gpio_mode_setup(GPIOB, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO6|GPIO7);
+	gpio_set_af(GPIOB, GPIO_AF1, GPIO6|GPIO7);
+
+	/* TFT nRST, A0 */
+	gpio_mode_setup(GPIOF, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO0 | GPIO1);
+	gpio_set_output_options(GPIOF, GPIO_OTYPE_PP, GPIO_OSPEED_25MHZ, GPIO0 | GPIO1);
+	gpio_clear(GPIOA, GPIO1|GPIO0);
+}
 
 #define HZ      100
 #define MSEC    (1000/HZ)
@@ -60,8 +103,9 @@ static void clock_setup(void) {
 	rcc_periph_clock_enable(RCC_GPIOA);
 	rcc_periph_clock_enable(RCC_GPIOB);
 	rcc_periph_clock_enable(RCC_GPIOF);
-//	rcc_periph_clock_enable(RCC_AFIO);
 	rcc_periph_clock_enable(RCC_SPI1);
+	rcc_periph_clock_enable(RCC_USART1);
+	rcc_periph_clock_enable(RCC_I2C1);
 }
 
 static void systick_setup(void) {
@@ -71,38 +115,19 @@ static void systick_setup(void) {
 	systick_interrupt_enable();
 }
 
-static void gpio_setup(void) {
-#if 0
-	gpio_set_mode(GPIOC, GPIO_MODE_OUTPUT_50_MHZ,
-		      GPIO_CNF_OUTPUT_PUSHPULL, GPIO13);
-
-	/* D/C: PB6, RST: PB7 */
-	gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_50_MHZ,
-		      GPIO_CNF_OUTPUT_PUSHPULL, GPIO6 | GPIO7);
-
-	gpio_clear(GPIOC, GPIO13);	/* LED */
-#endif
-}
-
 static void spi_setup(void) {
-	//gpio_primary_remap(AFIO_MAPR_SWJ_CFG_JTAG_OFF_SW_ON, AFIO_MAPR_SPI1_REMAP);
-#if 0
-	/* SS=PA15, SCK=PB3, MISO=PB4 and MOSI=PB5 */
-	gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, GPIO15 );
-
-	gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, GPIO3 | GPIO5 );
-
-	gpio_set_mode(GPIOB, GPIO_MODE_INPUT, GPIO_CNF_INPUT_FLOAT, GPIO4);
-
 	spi_reset(SPI1);
-	spi_init_master(SPI1, SPI_CR1_BAUDRATE_FPCLK_DIV_8, SPI_CR1_CPOL_CLK_TO_0_WHEN_IDLE,
-				  SPI_CR1_CPHA_CLK_TRANSITION_1, SPI_CR1_DFF_8BIT, SPI_CR1_MSBFIRST);
-
+	spi_init_master(SPI1, SPI_CR1_BAUDRATE_FPCLK_DIV_8, SPI_CR1_CPOL_CLK_TO_0_WHEN_IDLE, 
+		SPI_CR1_CPHA_CLK_TRANSITION_1, SPI_CR1_MSBFIRST);
 	spi_enable_software_slave_management(SPI1);
 	spi_set_nss_high(SPI1);
-
 	spi_enable(SPI1);
-#endif
+}
+
+static void i2c_setup(void) {
+}
+
+static void uart_setup(void) {
 }
 
 int i2c_xfer(uint8_t addr, const void *wr_p, size_t wr_sz, void *rd_p, size_t rd_sz) {
@@ -124,14 +149,17 @@ void uart_flush(int ch) {
 }
 
 void spi_tx(const void *p, size_t n) {
-}
-
-void gpio_setval(uint8_t gpio_id, uint8_t val) {
+	const uint8_t *d=p;
+	for(;n;n--,d++)
+		spi_send(SPI1, *d);
 }
 
 void hw_init(int argc, char **argv) {
+	argc=argc; argv=argv;
 	clock_setup();
 	systick_setup();
 	gpio_setup();
 	spi_setup();
+	uart_setup();
+	i2c_setup();
 }
