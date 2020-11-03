@@ -34,6 +34,9 @@ include $(OPENCM3_DIR)/mk/genlink-rules.mk
 stm32: all
 	$(PREFIX)size $(ELF_FILE)
 
+stm32_flash: stm32 $(PROJECT).bin
+	dfu-util -a 0 --dfuse-address 0x08000000 -D $(PROJECT).bin
+
 linux:
 	gcc $(GENERIC_CFLAGS) $(LINUX_ARGS) $(COMMON_FILES) platform/linux.c
 	
