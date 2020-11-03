@@ -32,6 +32,7 @@ include stm32-rules.mk
 include $(OPENCM3_DIR)/mk/genlink-rules.mk
 
 stm32: all
+	$(PREFIX)size $(ELF_FILE)
 
 linux:
 	gcc $(GENERIC_CFLAGS) $(LINUX_ARGS) $(COMMON_FILES) platform/linux.c
