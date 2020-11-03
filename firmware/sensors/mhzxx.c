@@ -36,6 +36,9 @@ enum {
 	SPAN_PT_CAL   = 0x88
 };
 
+int mhzxx_init(uint8_t addr);
+int mhzxx_read(uint8_t addr, readings_t *vals);
+
 static uint8_t cksum(const uint8_t *d, size_t n) {
 	uint8_t res;
 	for(res=0;n;n--,d++)
@@ -48,6 +51,7 @@ static const uint8_t read_cmd[] = {0xff, 1, READ_CO2, 0, 0, 0, 0, 0, 0x79};
 int mhzxx_read(uint8_t addr, readings_t *vals) {
 	uint8_t resp[9];
 	int res;
+	addr=addr; /* prevent compiler warning */
 	uart_config(UART_SENSOR_CH, 9600);
 	uart_flush(UART_SENSOR_CH);
 	uart_tx(UART_SENSOR_CH, read_cmd, sizeof(read_cmd));

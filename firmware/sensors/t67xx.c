@@ -32,6 +32,9 @@ enum {
 	ABC_LOGIC_EN_DISABLE   = 1006
 };
 
+int t67xx_init(uint8_t addr);
+int t67xx_read(uint8_t addr, readings_t *vals);
+
 static int read_reg(uint8_t addr, uint16_t reg, uint16_t *dst) {
 	uint8_t tdata[5] = {4, reg>>8, reg&0xff, 0, 1};
 	uint8_t rdata[4] = {0x23, 0x23, 0x23, 0x23};

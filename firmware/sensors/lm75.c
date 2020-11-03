@@ -19,6 +19,9 @@
 #include "sensor.h"
 #include "platform.h"
 
+int lm75_init(uint8_t addr);
+int lm75_read(uint8_t addr, readings_t *vals);
+
 int lm75_read(uint8_t addr, readings_t *vals) {
 	uint8_t rptr=0;
 	int8_t temp;

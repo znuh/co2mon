@@ -1,0 +1,22 @@
+PROJECT = co2mon
+BUILD_DIR = bin
+
+CFILES = utils.c display.c sensors.c main.c
+CFILES += sensors/hih6x.c sensors/lm75.c sensors/mhzxx.c sensors/scd30.c sensors/shtc3.c sensors/t67xx.c
+CFILES += displays/oled.c displays/tft.c
+CFILES += fonts/fonts.c
+CFILES += platform/stm32f042k.c
+
+TGT_CFLAGS += -DPLATFORM_STM32      -DPLATFORM_STRING='"STM32F042K"'
+
+DEVICE=stm32f042k6t6
+#OOCD_FILE = board/stm32f4discovery.cfg
+
+# You shouldn't have to edit anything below here.
+#VPATH += $(SHARED_DIR)
+INCLUDES += $(patsubst %,-I%, . $(SHARED_DIR))
+OPENCM3_DIR=libopencm3
+
+include $(OPENCM3_DIR)/mk/genlink-config.mk
+include stm32-rules.mk
+include $(OPENCM3_DIR)/mk/genlink-rules.mk

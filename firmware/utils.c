@@ -17,6 +17,7 @@
  * along with this code.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include <stdint.h>
+#include "utils.h"
 
 /* val:          value
  * buf:          dst buffer

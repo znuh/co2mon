@@ -32,6 +32,9 @@ enum {
 	CMD_MEASURE   = 0x7866, /* no clock stretching, temp first, normal mode */
 };
 
+int shtc3_init(uint8_t addr);
+int shtc3_read(uint8_t addr, readings_t *vals);
+
 static int cmd(uint8_t addr, uint16_t cval, uint8_t *rxd, uint8_t rx_sz) {
 	uint8_t buf[2] = {cval>>8, cval&0xff};
 	return i2c_xfer(addr, buf, 2, rxd, rx_sz);

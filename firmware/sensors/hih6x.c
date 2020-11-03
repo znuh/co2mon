@@ -28,6 +28,9 @@ enum {
 	STATUS_INVALID = 3
 };
 
+int hih6x_init(uint8_t addr);
+int hih6x_read(uint8_t addr, readings_t *vals);
+
 int hih6x_read(uint8_t addr, readings_t *vals) {
 	uint8_t rptr=0, rdata[4];
 	uint8_t res = i2c_xfer(addr, &rptr, sizeof(rptr), rdata, sizeof(rdata));

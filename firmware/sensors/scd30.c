@@ -37,6 +37,10 @@ enum {
 	
 };
 
+
+int scd30_init(uint8_t addr);
+int scd30_read(uint8_t addr, readings_t *vals);
+
 #ifdef DEBUG
 static void hexdump(const uint8_t *d, size_t n) {
 	for(;n;n--,d++)
@@ -58,8 +62,8 @@ static uint8_t crc8(const uint8_t *d, size_t n) {
 }
 
 static int scd30_command(uint8_t addr, uint16_t cmd, uint8_t argc, uint16_t argv0, uint8_t *rd, size_t rd_n) {
-	uint8_t txbuf[5] = {cmd>>8, cmd&0xff, 0, 0, 0};
-	int res, n=2;
+	uint8_t n=2, txbuf[5] = {cmd>>8, cmd&0xff, 0, 0, 0};
+	int res;
 	if(argc > 0) {
 		txbuf[2] = argv0>>8;
 		txbuf[3] = argv0&0xff;
@@ -76,7 +80,7 @@ static int scd30_command(uint8_t addr, uint16_t cmd, uint8_t argc, uint16_t argv
 	if(res < 1)
 		return res;
 	/* verify checksum */
-	for(n=0;(n+2)<rd_n;n+=3) {
+	for(n=0;(uint8_t)(n+2)<rd_n;n+=3) {
 		if(crc8(rd+n,2) != rd[n+2])
 			return 0;
 	}
