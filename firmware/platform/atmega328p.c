@@ -332,7 +332,7 @@ void spi_tx(const void *p, size_t n) {
 /* GPIO_TFT_NCS : PB2
  * GPIO_TFT_NRST: PC2
  * GPIO_TFT_A0  : PC3 */
-void gpio_set(uint8_t gpio_id, uint8_t val) {
+void gpio_setval(uint8_t gpio_id, uint8_t val) {
 	uint8_t bpos[] = {PB2, PC2, PC3};
 	uint8_t bit = bpos[gpio_id];
 

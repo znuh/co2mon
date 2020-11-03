@@ -178,7 +178,7 @@ void spi_tx(const void *p, size_t n) {
 	/* not (yet) implemented */
 }
 
-void gpio_set(uint8_t gpio_id, uint8_t val) {
+void gpio_setval(uint8_t gpio_id, uint8_t val) {
 	/* not (yet) implemented */
 }
 

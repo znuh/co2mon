@@ -38,7 +38,7 @@ uint8_t tft_showtext(char **lines, uint8_t n);
 static inline void tft_mode(uint8_t new_mode) {
 	static uint8_t current_mode = MODE_UNDEF;
 	if(current_mode != new_mode) {
-		gpio_set(GPIO_TFT_A0, new_mode);
+		gpio_setval(GPIO_TFT_A0, new_mode);
 		current_mode = new_mode;
 	}
 }
@@ -282,14 +282,14 @@ void tft_init(void) {
 	uint8_t i, j, cmd;
 
 	/* do a hardware reset first */
-	gpio_set(GPIO_TFT_NCS, 1);
-	gpio_set(GPIO_TFT_NRST, 0);
+	gpio_setval(GPIO_TFT_NCS, 1);
+	gpio_setval(GPIO_TFT_NRST, 0);
 	msleep(1);
-	gpio_set(GPIO_TFT_NRST, 1);
+	gpio_setval(GPIO_TFT_NRST, 1);
 	msleep(ST77_INIT_DELAY);
 
 	/* select display and send sleep-out */
-	gpio_set(GPIO_TFT_NCS, 0);
+	gpio_setval(GPIO_TFT_NCS, 0);
 	tft_write(ST77_CMD_SLPOUT, NULL, 0);
 	msleep(ST77_INIT_DELAY);
 

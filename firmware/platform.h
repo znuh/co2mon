@@ -27,7 +27,7 @@ enum {
 	GPIO_INVALID       = 3
 };
 
-void gpio_set(uint8_t gpio_id, uint8_t val);
+void gpio_setval(uint8_t gpio_id, uint8_t val);
 
 /* UART 'channels' are used to distinguish between the sensor-UART and the USB/etc. UART
  * the UART channel is *NOT* the hardware UART peripheral ID.

@@ -24,7 +24,7 @@ void uart_flush(int ch) {
 void spi_tx(const void *p, size_t n) {
 }
 
-void gpio_set(uint8_t gpio_id, uint8_t val) {
+void gpio_setval(uint8_t gpio_id, uint8_t val) {
 }
 
 void hw_init(int argc, char **argv) {	
