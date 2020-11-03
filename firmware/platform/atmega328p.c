@@ -354,5 +354,4 @@ void hw_init(int argc, char **argv) {
 	twi_init();
 	io_init();
 	spi_init();
-	msleep(10); /* softuart TXD has been low for a while, so let's wait a bit */
 }
