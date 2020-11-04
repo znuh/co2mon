@@ -1,4 +1,5 @@
 #include "platform.h"
+
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/stm32/gpio.h>
 #include <libopencm3/stm32/spi.h>
@@ -12,6 +13,8 @@
 
 #include <stdint.h>
 #include <inttypes.h>
+
+#include "utils.h"
 
 /* IO assignments:
  * 
@@ -135,10 +138,60 @@ static void i2c_setup(void) {
 	i2c_set_digital_filter(I2C1, 0);
 	i2c_set_speed(I2C1, i2c_speed_sm_100k, 48);
 	i2c_peripheral_enable(I2C1);
+	i2c_disable_autoend(I2C1); /* disable auto STOP generation */
 }
 
-static int i2c_start(uint8_t addr) {
-	/* TBD */
+/* I2C_ISR_BUSY: Bus busy
+ * 
+ * I2C_ISR_TIMEOUT: Timeout or t_LOW detection flag
+ * I2C_ISR_PECERR: PEC Error in reception
+ * I2C_ISR_OVR: Overrun/Underrun (slave mode)
+ * I2C_ISR_ARLO: Arbitration lost
+ * I2C_ISR_BERR: Bus error
+ * 
+ * I2C_ISR_TCR: Transfer Complete Reload
+ * I2C_ISR_TC: Transfer Complete (master mode)
+ * I2C_ISR_STOPF: Stop detection flag
+ * I2C_ISR_NACKF: Not Acknowledge received flag
+ * 
+ * I2C_ISR_RXNE: Receive data register not empty (receivers)
+ * I2C_ISR_TXIS: Transmit interrupt status (transmitters)
+ * I2C_ISR_TXE: Transmit data register empty (transmitters)
+ */
+#define I2C_ISR_ERRORMASK      (I2C_ISR_TIMEOUT|I2C_ISR_PECERR|I2C_ISR_OVR|I2C_ISR_ARLO|I2C_ISR_BERR)
+#define I2C_SOFT_TIMEOUT       65536 /* assuming 48MHz, 5 cycles per loop: 65536*5*20.83ns = ~6.8ms */
+
+static int i2c_status_wait(void) {
+	uint32_t soft_timeout;
+	int res=0;
+	for(soft_timeout=I2C_SOFT_TIMEOUT;soft_timeout;soft_timeout--) {
+		uint32_t sr = I2C_ISR(I2C1);
+		if(sr&I2C_ISR_ERRORMASK)
+			return -1;
+		if(sr&I2C_ISR_BUSY)
+			continue;
+		/* TODO */
+	}
+	return soft_timeout ? res : -1; /* -1 if timeout */
+}
+
+#define I2C_READ    1
+#define I2C_WRITE   0
+
+static int i2c_start(uint8_t addr, uint8_t read_nwrite, size_t n) {
+	i2c_set_7bit_address(I2C1, addr);
+	if(read_nwrite == I2C_READ)
+		i2c_set_read_transfer_dir(I2C1);
+	else
+		i2c_set_write_transfer_dir(I2C1);
+	i2c_set_bytes_to_transfer(I2C1, MIN(n,255));
+	if(n>255)
+		I2C_CR2(I2C1) |= I2C_CR2_RELOAD;
+	else
+		I2C_CR2(I2C1) &= ~I2C_CR2_RELOAD;
+	i2c_send_start(I2C1);
+	/* TODO: wait until done:
+	 * NACKF=1 or TXIS */
 	return 0;
 }
 
@@ -146,18 +199,15 @@ static void i2c_stop(void) {
 	/* TBD */
 }
 
-static int i2c_sendbyte(uint8_t b) {
+static int i2c_write(const uint8_t *d, size_t n) {
 	/* TBD */
 	return 0;
 }
 
-static int i2c_rcvbyte(uint8_t *d, uint8_t ack) {
+static int i2c_read(uint8_t *d, size_t n) {
 	/* TBD */
 	return 0;
 }
-
-#define I2C_READ    1
-#define I2C_WRITE   0
 
 int i2c_xfer(uint8_t addr, const void *wr_p, size_t wr_sz, void *rd_p, size_t rd_sz) {
 	const uint8_t *wr_d = wr_p;
@@ -166,33 +216,43 @@ int i2c_xfer(uint8_t addr, const void *wr_p, size_t wr_sz, void *rd_p, size_t rd
 
 	/* write cycle */
 	if((wr_d) && (wr_sz>0)) {
-		int res = i2c_start((addr<<1)|I2C_WRITE);
+		int res = i2c_start(addr,I2C_WRITE,wr_sz);
 		if(!res)
 			goto out;
-		for(;wr_sz;wr_sz--,wr_d++) {
-			res = i2c_sendbyte(*wr_d);
-			if(!res)
-				goto out;
-		}
-		/* not stop here b/c repeated start follows or stop before function return */
+		res = i2c_write(wr_p, wr_sz);
+		if(!res)
+			goto out;
+		/* no stop here b/c repeated start follows or stop before function return */
 		n++;
 	}
 
 	/* read cycle */
 	if((rd_d) && (rd_sz>0)) {
-		int res = i2c_start((addr<<1)|I2C_READ);
+		int res = i2c_start(addr,I2C_READ,rd_sz);
 		if(!res)
 			goto out;
-		for(;rd_sz;rd_sz--,rd_d++) {
-			res = i2c_rcvbyte(rd_d, rd_sz > 1);
-			if(!res)
-				goto out;
-		}
+		res = i2c_read(rd_p, rd_sz);
+		if(!res)
+			goto out;
 		n++;
 	}
 
 out:
 	i2c_stop();
+
+	/* do a sort-of soft reset if error flag(s) set 
+	 * resets state machine and all error flags */
+	if(I2C_ISR(I2C1) & I2C_ISR_ERRORMASK) {
+		int i;
+		i2c_peripheral_disable(I2C1);
+		/* RM0091: PE must be kept low for at least 3 APB clock cycles */
+		for(i=5;i;i--) {
+			uint32_t dummy = I2C_ISR(I2C1);
+			dummy=dummy; /* silence the compiler warning */
+		}
+		i2c_peripheral_enable(I2C1);
+	}
+
 	return n;
 }
 
