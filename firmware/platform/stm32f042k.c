@@ -162,25 +162,25 @@ static void i2c_setup(void) {
 #define I2C_ICR_CLEARMASK      (I2C_ICR_ALERTCF|I2C_ICR_TIMOUTCF|I2C_ICR_PECCF|I2C_ICR_OVRCF|I2C_ICR_ARLOCF| \
                                 I2C_ICR_BERRCF|I2C_ICR_STOPCF|I2C_ICR_NACKCF|I2C_ICR_ADDRCF)
 #define I2C_SOFT_TIMEOUT       65536 /* assuming 48MHz, 5 cycles per loop: 65536*5*20.83ns = ~6.8ms */
-
-static int i2c_status_wait(void) {
-	uint32_t soft_timeout;
-	int res=0;
-	for(soft_timeout=I2C_SOFT_TIMEOUT;soft_timeout;soft_timeout--) {
-		uint32_t sr = I2C_ISR(I2C1);
+static uint32_t i2c_status_wait(uint32_t flags) {
+	uint32_t sr, soft_timeout=I2C_SOFT_TIMEOUT;
+	for(;soft_timeout;soft_timeout--) {
+		sr = I2C_ISR(I2C1);
 		if(sr&I2C_ISR_ERRORMASK)
-			return -1;
+			break;
 		if(sr&I2C_ISR_BUSY)
 			continue;
-		/* TODO */
+		if((sr&flags) || (!flags)) /* return if at least 1 flag matches */
+			break;
 	}
-	return soft_timeout ? res : -1; /* -1 if timeout */
+	return sr;
 }
 
 #define I2C_READ    1
 #define I2C_WRITE   0
 
 static int i2c_start(uint8_t addr, uint8_t read_nwrite, size_t n) {
+	uint32_t sr, ready_flag = (read_nwrite == I2C_WRITE) ? I2C_ISR_TXIS : I2C_ISR_RXNE;
 	i2c_set_7bit_address(I2C1, addr);
 	if(read_nwrite == I2C_READ)
 		i2c_set_read_transfer_dir(I2C1);
@@ -192,9 +192,8 @@ static int i2c_start(uint8_t addr, uint8_t read_nwrite, size_t n) {
 	else
 		I2C_CR2(I2C1) &= ~I2C_CR2_RELOAD;
 	i2c_send_start(I2C1);
-	/* TODO: wait until done:
-	 * NACKF=1 or TXIS */
-	return 0;
+	sr = i2c_status_wait(I2C_ISR_NACKF | ready_flag);
+	return (sr&ready_flag) == ready_flag;
 }
 
 static int i2c_write(const uint8_t *d, size_t n) {
@@ -213,7 +212,7 @@ int i2c_xfer(uint8_t addr, const void *wr_p, size_t wr_sz, void *rd_p, size_t rd
 	int n=0;
 
 	/* wait if i2c peripheral still busy */
-	i2c_status_wait();
+	i2c_status_wait(0);
 
 	/* do a sort-of soft reset if error flag(s) set
 	 * resets state machine and all error flags */
@@ -256,7 +255,6 @@ int i2c_xfer(uint8_t addr, const void *wr_p, size_t wr_sz, void *rd_p, size_t rd
 
 out:
 	i2c_send_stop(I2C1);
-
 	return n;
 }
 
