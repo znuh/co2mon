@@ -117,7 +117,7 @@ int i2c_xfer(uint8_t addr, const void *wr_p, size_t wr_sz, void *rd_p, size_t rd
 			if(!res)
 				goto out;
 		}
-		/* not stop here b/c repeated start follows or stop before function return */
+		/* no stop here b/c repeated start follows or stop before function return */
 		n++;
 	}
 
