@@ -179,8 +179,7 @@ static uint32_t i2c_status_wait(uint32_t flags) {
 #define I2C_READ    1
 #define I2C_WRITE   0
 
-static int i2c_start(uint8_t addr, uint8_t read_nwrite, size_t n) {
-	uint32_t sr, ready_flag = (read_nwrite == I2C_WRITE) ? I2C_ISR_TXIS : I2C_ISR_RXNE;
+static void i2c_start(uint8_t addr, uint8_t read_nwrite, size_t n) {
 	i2c_set_7bit_address(I2C1, addr);
 	if(read_nwrite == I2C_READ)
 		i2c_set_read_transfer_dir(I2C1);
@@ -192,16 +191,53 @@ static int i2c_start(uint8_t addr, uint8_t read_nwrite, size_t n) {
 	else
 		I2C_CR2(I2C1) &= ~I2C_CR2_RELOAD;
 	i2c_send_start(I2C1);
-	sr = i2c_status_wait(I2C_ISR_NACKF | ready_flag);
-	return (sr&ready_flag) == ready_flag;
 }
 
-static int i2c_write(const uint8_t *d, size_t n) {
-	/* TBD */
-	return 0;
+#define I2C_TX_STATUSMASK     (I2C_ISR_NACKF | I2C_ISR_TXIS)
+
+/* this function should resemble the flow-charts from figures 231, 232 of RM0091 */
+static int i2c_write(uint8_t addr, const uint8_t *d, size_t n) {
+	uint32_t nbytes = MIN(n,255), reload = n>255;
+
+	i2c_start(addr,I2C_WRITE,n);
+
+	while(n) {
+		uint32_t sr = i2c_status_wait(I2C_TX_STATUSMASK);
+		if(sr != I2C_ISR_TXIS)
+			return 0;
+		i2c_send_data(I2C1, *d++);
+		n--;
+		nbytes--;
+		if(nbytes) /* continue until current chunk complete */
+			continue;
+		else { /* current chunk complete */
+			sr = i2c_status_wait(I2C_ISR_TC|I2C_ISR_TCR);
+			if(!(sr & I2C_ISR_TC)) /* TC not set -> error */
+				return 0;
+			if(!reload) /* last chunk -> done */
+				return 1;
+			/* not last chunk - expect TCR set */
+			if(!(sr & I2C_ISR_TCR)) /* TCR not set -> error */
+				return 0;
+			/* next chunk */
+			nbytes =  MIN(n,255);
+			i2c_set_bytes_to_transfer(I2C1, nbytes);
+			reload = n>255;
+			if(reload)
+				I2C_CR2(I2C1) |= I2C_CR2_RELOAD;
+			else
+				I2C_CR2(I2C1) &= ~I2C_CR2_RELOAD;
+		} /* current nbytes chunk complete */
+	} /* foreach byte to write */
+	
+	return 0; /* shouldn't be reached */
 }
 
-static int i2c_read(uint8_t *d, size_t n) {
+static int i2c_read(uint8_t addr, uint8_t *d, size_t n) {
+	uint32_t nbytes = MIN(n,255), reload = n>255;
+
+	i2c_start(addr,I2C_READ,n);
+	
 	/* TBD */
 	return 0;
 }
@@ -232,10 +268,7 @@ int i2c_xfer(uint8_t addr, const void *wr_p, size_t wr_sz, void *rd_p, size_t rd
 
 	/* write cycle */
 	if((wr_d) && (wr_sz>0)) {
-		int res = i2c_start(addr,I2C_WRITE,wr_sz);
-		if(!res)
-			goto out;
-		res = i2c_write(wr_p, wr_sz);
+		int res = i2c_write(addr, wr_p, wr_sz);
 		if(!res)
 			goto out;
 		/* no stop here b/c repeated start follows or stop before function return */
@@ -244,10 +277,7 @@ int i2c_xfer(uint8_t addr, const void *wr_p, size_t wr_sz, void *rd_p, size_t rd
 
 	/* read cycle */
 	if((rd_d) && (rd_sz>0)) {
-		int res = i2c_start(addr,I2C_READ,rd_sz);
-		if(!res)
-			goto out;
-		res = i2c_read(rd_p, rd_sz);
+		int res = i2c_read(addr, rd_p, rd_sz);
 		if(!res)
 			goto out;
 		n++;
