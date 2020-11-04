@@ -237,9 +237,38 @@ static int i2c_read(uint8_t addr, uint8_t *d, size_t n) {
 	uint32_t nbytes = MIN(n,255), reload = n>255;
 
 	i2c_start(addr,I2C_READ,n);
+
+	while(n) {
+		uint32_t sr = i2c_status_wait(I2C_ISR_RXNE);
+		if(sr != I2C_ISR_RXNE)
+			return 0;
+		*d = i2c_get_data(I2C1);
+		d++;
+		n--;
+		nbytes--;
+		if(nbytes) /* continue until current chunk complete */
+			continue;
+		else { /* current chunk complete */
+			sr = i2c_status_wait(I2C_ISR_TC|I2C_ISR_TCR);
+			if(!(sr & I2C_ISR_TC)) /* TC not set -> error */
+				return 0;
+			if(!reload) /* last chunk -> done */
+				return 1;
+			/* not last chunk - expect TCR set */
+			if(!(sr & I2C_ISR_TCR)) /* TCR not set -> error */
+				return 0;
+			/* next chunk */
+			nbytes =  MIN(n,255);
+			i2c_set_bytes_to_transfer(I2C1, nbytes);
+			reload = n>255;
+			if(reload)
+				I2C_CR2(I2C1) |= I2C_CR2_RELOAD;
+			else
+				I2C_CR2(I2C1) &= ~I2C_CR2_RELOAD;
+		} /* current nbytes chunk complete */
+	} /* foreach byte to write */
 	
-	/* TBD */
-	return 0;
+	return 0; /* shouldn't be reached */
 }
 
 int i2c_xfer(uint8_t addr, const void *wr_p, size_t wr_sz, void *rd_p, size_t rd_sz) {
