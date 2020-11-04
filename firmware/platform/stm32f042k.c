@@ -159,6 +159,8 @@ static void i2c_setup(void) {
  * I2C_ISR_TXE: Transmit data register empty (transmitters)
  */
 #define I2C_ISR_ERRORMASK      (I2C_ISR_TIMEOUT|I2C_ISR_PECERR|I2C_ISR_OVR|I2C_ISR_ARLO|I2C_ISR_BERR)
+#define I2C_ICR_CLEARMASK      (I2C_ICR_ALERTCF|I2C_ICR_TIMOUTCF|I2C_ICR_PECCF|I2C_ICR_OVRCF|I2C_ICR_ARLOCF| \
+                                I2C_ICR_BERRCF|I2C_ICR_STOPCF|I2C_ICR_NACKCF|I2C_ICR_ADDRCF)
 #define I2C_SOFT_TIMEOUT       65536 /* assuming 48MHz, 5 cycles per loop: 65536*5*20.83ns = ~6.8ms */
 
 static int i2c_status_wait(void) {
@@ -195,10 +197,6 @@ static int i2c_start(uint8_t addr, uint8_t read_nwrite, size_t n) {
 	return 0;
 }
 
-static void i2c_stop(void) {
-	/* TBD */
-}
-
 static int i2c_write(const uint8_t *d, size_t n) {
 	/* TBD */
 	return 0;
@@ -213,6 +211,25 @@ int i2c_xfer(uint8_t addr, const void *wr_p, size_t wr_sz, void *rd_p, size_t rd
 	const uint8_t *wr_d = wr_p;
 	uint8_t *rd_d = rd_p;
 	int n=0;
+
+	/* wait if i2c peripheral still busy */
+	i2c_status_wait();
+
+	/* do a sort-of soft reset if error flag(s) set
+	 * resets state machine and all error flags */
+	if(I2C_ISR(I2C1) & I2C_ISR_ERRORMASK) {
+		int i;
+		i2c_peripheral_disable(I2C1);
+		/* RM0091: PE must be kept low for at least 3 APB clock cycles */
+		for(i=5;i;i--) {
+			uint32_t dummy = I2C_ISR(I2C1);
+			dummy=dummy; /* silence the compiler warning */
+		}
+		i2c_peripheral_enable(I2C1);
+	}
+	
+	/* clear all flags */
+	I2C_ICR(I2C1) = I2C_ICR_CLEARMASK;
 
 	/* write cycle */
 	if((wr_d) && (wr_sz>0)) {
@@ -238,20 +255,7 @@ int i2c_xfer(uint8_t addr, const void *wr_p, size_t wr_sz, void *rd_p, size_t rd
 	}
 
 out:
-	i2c_stop();
-
-	/* do a sort-of soft reset if error flag(s) set 
-	 * resets state machine and all error flags */
-	if(I2C_ISR(I2C1) & I2C_ISR_ERRORMASK) {
-		int i;
-		i2c_peripheral_disable(I2C1);
-		/* RM0091: PE must be kept low for at least 3 APB clock cycles */
-		for(i=5;i;i--) {
-			uint32_t dummy = I2C_ISR(I2C1);
-			dummy=dummy; /* silence the compiler warning */
-		}
-		i2c_peripheral_enable(I2C1);
-	}
+	i2c_send_stop(I2C1);
 
 	return n;
 }
