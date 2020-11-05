@@ -107,6 +107,24 @@ static void udelay(uint32_t n) {
 		__asm__("nop");
 }
 
+#if 0
+typedef struct timeout_s {
+	uint32_t start;
+	uint32_t end;
+	int need_rollover;
+} timeout_t;
+
+static void timeout_set(timeout_t *to, uint32_t timeout) {
+	to->start = jiffies;
+	to->end = to->start + timeout;
+	to->need_rollover = to->start >= to->end;
+}
+
+static int timeout(timeout_t *to) {
+	return 0; /* TODO */
+}
+#endif
+
 static void clock_setup(void) {
 	rcc_clock_setup_in_hsi_out_48mhz();
 	rcc_periph_clock_enable(RCC_GPIOA);
