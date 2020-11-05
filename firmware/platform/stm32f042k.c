@@ -141,14 +141,14 @@ static void spi_setup(void) {
 /* TODO: clock stretching w/ timeout 
  * expects SCL low 
  * returns w/ SCL low */
-static int i2c_cycle(int sda) {
+static inline int i2c_cycle(int sda) {
 	int res;
 
 	if(sda)
 		gpio_set(I2C_PORT, I2C_SDA);
 	else
 		gpio_clear(I2C_PORT, I2C_SDA);
-	udelay(I2C_HALFCYCLE_DELAY);
+	udelay(I2C_HALFCYCLE_DELAY>>1);
 
 	/* SCL high */
 	gpio_set(I2C_PORT, I2C_SCL);
@@ -162,7 +162,7 @@ static int i2c_cycle(int sda) {
 
 	/* SCL low */
 	gpio_clear(I2C_PORT, I2C_SCL);
-	udelay(I2C_HALFCYCLE_DELAY);
+	udelay(I2C_HALFCYCLE_DELAY>>1);
 
 	return res; /* return sampled value */
 }
