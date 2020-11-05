@@ -205,7 +205,7 @@ static int i2c_start(uint8_t addr) {
 
 static inline int i2c_rcvbyte(uint8_t *b, uint8_t ack) {
 	int res = i2c_9bit_xfer((0xff<<1)|(ack^1));
-	if((b) && (res>=0)) *b = res>>1;
+	if(res>=0) *b = res>>1;
 	return res >= 0;
 }
 
