@@ -136,28 +136,68 @@ static void spi_setup(void) {
 
 #define I2C_READ              1
 #define I2C_WRITE             0
-#define I2C_HALFCYCLE_DELAY   300
+#define I2C_HALFCYCLE_DELAY   21   /* measured and tuned for 99kHz @48MHz F_CPU */
+
+/* TODO: clock stretching w/ timeout 
+ * expects SCL low 
+ * returns w/ SCL low */
+static int i2c_cycle(int sda) {
+	int res;
+
+	if(sda)
+		gpio_set(I2C_PORT, I2C_SDA);
+	else
+		gpio_clear(I2C_PORT, I2C_SDA);
+	udelay(I2C_HALFCYCLE_DELAY);
+
+	/* SCL high */
+	gpio_set(I2C_PORT, I2C_SCL);
+	udelay(I2C_HALFCYCLE_DELAY);
+
+	/* TODO: clock stretching w/ timeout */
+	while(!(gpio_get(I2C_PORT, I2C_SCL))) {}
+
+	/* sample SDA */
+	res = gpio_get(I2C_PORT, I2C_SDA) != 0;
+
+	/* SCL low */
+	gpio_clear(I2C_PORT, I2C_SCL);
+	udelay(I2C_HALFCYCLE_DELAY);
+
+	return res; /* return sampled value */
+}
+
+/* expects SCL low 
+ * returns w/ SCL low */
+static int i2c_9bit_xfer(uint32_t txd) {
+	int rxd=0, res=0, i=9;
+	for(;i && (res>=0);i--,txd<<=1) {
+		res = i2c_cycle(txd&0x100);
+		rxd<<=1;
+		rxd|=res;
+	}
+	return res < 0 ? res : rxd;
+}
 
 static int i2c_sendbyte(uint8_t b) {
-	/* TBD */
-	return 0;
+	int res = i2c_9bit_xfer((b<<1)|1); /* additional 9th bit needes to be hi for ACK rx */
+	return (res >= 0) && (!(res&1));   /* check if no error and ACK received */
 }
 
-/* gpio_get(I2C_PORT, I2C_SCL|I2C_SDA) */
-
+/* expects SCL hi,  SDA hi 
+ * result: SCL low, SDA low 
+ * 
+ * TODO: check SCL/SDA state for repeated start */
 static int i2c_start(uint8_t addr) {
-	while(1) {
-		gpio_clear(I2C_PORT, I2C_SCL|I2C_SDA);
-		udelay(I2C_HALFCYCLE_DELAY);
-		gpio_set(I2C_PORT, I2C_SCL|I2C_SDA);
-		udelay(I2C_HALFCYCLE_DELAY);
-	}
-	/* TBD */
-	return 0;
+	gpio_clear(I2C_PORT, I2C_SDA);
+	udelay(I2C_HALFCYCLE_DELAY);
+	gpio_clear(I2C_PORT, I2C_SCL);
+	udelay(I2C_HALFCYCLE_DELAY);
+	return i2c_sendbyte(addr);
 }
 
-static int i2c_rcvbyte(uint8_t *b, uint8_t ack) {
-	/* TBD */
+static inline int i2c_rcvbyte(uint8_t *b, uint8_t ack) {
+	/* TODO */
 	return 0;
 }
 
