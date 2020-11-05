@@ -171,12 +171,13 @@ static int i2c_cycle(int sda) {
  * returns w/ SCL low */
 static int i2c_9bit_xfer(uint32_t txd) {
 	int rxd=0, res=0, i=9;
-	for(;i && (res>=0);i--,txd<<=1) {
+	for(;i;i--,txd<<=1) {
 		res = i2c_cycle(txd&0x100);
+		if(res < 0) return res;
 		rxd<<=1;
 		rxd|=res;
 	}
-	return res < 0 ? res : rxd;
+	return rxd;
 }
 
 static int i2c_sendbyte(uint8_t b) {
@@ -197,12 +198,22 @@ static int i2c_start(uint8_t addr) {
 }
 
 static inline int i2c_rcvbyte(uint8_t *b, uint8_t ack) {
-	/* TODO */
-	return 0;
+	int res = i2c_9bit_xfer((0xff<<1)|(ack^1));
+	if((*b) && (res>=0)) *b = res;
+	return res >= 0;
 }
 
+/* expects SCL low,
+ * returns w/ SCL hi, SDA hi */
 static void i2c_stop(void) {
-	/* TBD */
+	gpio_clear(I2C_PORT, I2C_SDA);
+	udelay(I2C_HALFCYCLE_DELAY);
+	
+	gpio_set(I2C_PORT, I2C_SCL);
+	udelay(I2C_HALFCYCLE_DELAY);
+	
+	gpio_set(I2C_PORT, I2C_SDA);
+	udelay(I2C_HALFCYCLE_DELAY);
 }
 
 /* Errata sheet ES0243 rev 3 lists several horrible errata for the hardware I2C peripheral
