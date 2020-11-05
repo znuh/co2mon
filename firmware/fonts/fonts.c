@@ -42,7 +42,7 @@ const font_t fonts[] = {
 
 	{.data = font_12x27_hpacked, .w = 12, .h = 27, .flags = FONTFLG_1BPP, .n_chars = 92, .index = NULL, .char_ofs = ' '}, /* TFT horizontal byte-packed 1bpp, glyph data: 3726 Bytes */
 	{.data = digits_38x50_rle,   .w = 38, .h = 50, .flags = FONTFLG_RLE, .n_chars = 12, .index = font_digits, .char_ofs = 0} /* TFT run-lenth encoded grayscale, rl encoded: 5043 Bytes */
-};
+}; /* total size: 760+1680+3726+5043 = 11209 Bytes */
 
 uint8_t font_index(const font_t *f, char c) {
 	uint8_t res;
