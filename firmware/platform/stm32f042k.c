@@ -185,21 +185,28 @@ static int i2c_sendbyte(uint8_t b) {
 	return (res >= 0) && (!(res&1));   /* check if no error and ACK received */
 }
 
-/* expects SCL hi,  SDA hi 
- * result: SCL low, SDA low 
- * 
- * TODO: check SCL/SDA state for repeated start */
+/* expects nothing
+ * result: SCL low, SDA low */
 static int i2c_start(uint8_t addr) {
 	/* repeated start? */
-	if(gpio_get(I2C_PORT, I2C_SCL|I2C_SDA) != (I2C_SCL|I2C_SDA)) {
-		/* set SDA hi, set SCL hi */
-		gpio_set(I2C_PORT, I2C_SCL|I2C_SDA);
+	if(!gpio_get(I2C_PORT, I2C_SDA)) { /* ensure SDA high */
+		gpio_set(I2C_PORT, I2C_SDA);
+		udelay(I2C_HALFCYCLE_DELAY>>1);
+	}
+	if(!gpio_get(I2C_PORT, I2C_SCL)) { /* ensure SCL high */
+		gpio_set(I2C_PORT, I2C_SCL);
 		udelay(I2C_HALFCYCLE_DELAY);
 	}
+
+	/* SDA -> low */
 	gpio_clear(I2C_PORT, I2C_SDA);
 	udelay(I2C_HALFCYCLE_DELAY);
+
+	/* SCL -> low */
 	gpio_clear(I2C_PORT, I2C_SCL);
-	udelay(I2C_HALFCYCLE_DELAY);
+	udelay(I2C_HALFCYCLE_DELAY>>1);
+
+	/* send addr. */
 	return i2c_sendbyte(addr);
 }
 
@@ -209,15 +216,15 @@ static inline int i2c_rcvbyte(uint8_t *b, uint8_t ack) {
 	return res >= 0;
 }
 
-/* expects SCL low,
+/* expects SCL low
  * returns w/ SCL hi, SDA hi */
 static void i2c_stop(void) {
 	gpio_clear(I2C_PORT, I2C_SDA);
 	udelay(I2C_HALFCYCLE_DELAY);
-	
+
 	gpio_set(I2C_PORT, I2C_SCL);
 	udelay(I2C_HALFCYCLE_DELAY);
-	
+
 	gpio_set(I2C_PORT, I2C_SDA);
 	udelay(I2C_HALFCYCLE_DELAY);
 }
