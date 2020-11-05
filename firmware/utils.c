@@ -52,3 +52,15 @@ char *i16_to_dec(int16_t val, char *buf, uint8_t n, int8_t point_ofs, uint8_t ze
 		*(--res)='-';
 	return res;
 }
+
+uint8_t crc8(uint8_t init, uint8_t poly, const uint8_t *d, size_t n) {
+	uint8_t crc = init;
+	uint8_t i;
+	for(;n;n--,d++) {
+		crc ^= *d;
+		for(i=8;i;i--) {
+			crc = (crc & 0x80) ? (crc<<1)^poly : crc<<1;
+		}
+	}
+	return crc;
+}

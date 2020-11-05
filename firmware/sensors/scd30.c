@@ -19,6 +19,7 @@
 #include <string.h>
 #include "sensor.h"
 #include "platform.h"
+#include "utils.h"
 //#define DEBUG
 #ifdef DEBUG
 #include <stdio.h>
@@ -37,7 +38,6 @@ enum {
 	
 };
 
-
 int scd30_init(uint8_t addr);
 int scd30_read(uint8_t addr, readings_t *vals);
 
@@ -49,17 +49,8 @@ static void hexdump(const uint8_t *d, size_t n) {
 }
 #endif
 
-static uint8_t crc8(const uint8_t *d, size_t n) {
-	uint8_t crc = 0xff;
-	uint8_t i;
-	for(;n;n--,d++) {
-		crc ^= *d;
-		for(i=8;i;i--) {
-			crc = (crc & 0x80) ? (crc<<1)^0x31 : crc<<1;
-		}
-	}
-	return crc;
-}
+#define CRC8_INIT    0xff
+#define CRC8_POLY    0x31
 
 static int scd30_command(uint8_t addr, uint16_t cmd, uint8_t argc, uint16_t argv0, uint8_t *rd, size_t rd_n) {
 	uint8_t n=2, txbuf[5] = {cmd>>8, cmd&0xff, 0, 0, 0};
@@ -67,7 +58,7 @@ static int scd30_command(uint8_t addr, uint16_t cmd, uint8_t argc, uint16_t argv
 	if(argc > 0) {
 		txbuf[2] = argv0>>8;
 		txbuf[3] = argv0&0xff;
-		txbuf[4] = crc8(txbuf+2,2);
+		txbuf[4] = crc8(CRC8_INIT, CRC8_POLY, txbuf+2, 2);
 		n=5;
 	}
 #ifdef DEBUG
@@ -81,7 +72,7 @@ static int scd30_command(uint8_t addr, uint16_t cmd, uint8_t argc, uint16_t argv
 		return res;
 	/* verify checksum */
 	for(n=0;(uint8_t)(n+2)<rd_n;n+=3) {
-		if(crc8(rd+n,2) != rd[n+2])
+		if(crc8(CRC8_INIT, CRC8_POLY, rd+n,2) != rd[n+2])
 			return 0;
 	}
 	return 1;
@@ -102,7 +93,7 @@ int scd30_init(uint8_t addr) {
 	res = scd30_command(addr, GET_DATARDY, 0, 0, rxbuf, sizeof(rxbuf));
 	if(res < 1)
 		return 0;
-	res = rxbuf[2] == crc8(rxbuf,2);
+	res = rxbuf[2] == crc8(CRC8_INIT, CRC8_POLY, rxbuf, 2);
 out:
 	return res;
 }
