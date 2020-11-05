@@ -190,6 +190,12 @@ static int i2c_sendbyte(uint8_t b) {
  * 
  * TODO: check SCL/SDA state for repeated start */
 static int i2c_start(uint8_t addr) {
+	/* repeated start? */
+	if(gpio_get(I2C_PORT, I2C_SCL|I2C_SDA) != (I2C_SCL|I2C_SDA)) {
+		/* set SDA hi, set SCL hi */
+		gpio_set(I2C_PORT, I2C_SCL|I2C_SDA);
+		udelay(I2C_HALFCYCLE_DELAY);
+	}
 	gpio_clear(I2C_PORT, I2C_SDA);
 	udelay(I2C_HALFCYCLE_DELAY);
 	gpio_clear(I2C_PORT, I2C_SCL);
@@ -199,7 +205,7 @@ static int i2c_start(uint8_t addr) {
 
 static inline int i2c_rcvbyte(uint8_t *b, uint8_t ack) {
 	int res = i2c_9bit_xfer((0xff<<1)|(ack^1));
-	if((*b) && (res>=0)) *b = res;
+	if((*b) && (res>=0)) *b = res>>1;
 	return res >= 0;
 }
 
