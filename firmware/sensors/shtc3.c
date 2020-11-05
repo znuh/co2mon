@@ -18,11 +18,7 @@
  */
 #include "sensor.h"
 #include "platform.h"
-
-//#define DEBUG
-#ifdef DEBUG
-#include <stdio.h>
-#endif
+#include "utils.h"
 
 enum {
 	CMD_SLEEP     = 0xB098,
@@ -35,16 +31,23 @@ enum {
 int shtc3_init(uint8_t addr);
 int shtc3_read(uint8_t addr, readings_t *vals);
 
+#define CRC8_INIT    0xff
+#define CRC8_POLY    0x31
+
+static int crc_check_word(const uint8_t *w) {
+	return crc8(CRC8_INIT, CRC8_POLY, w, 2) == w[3];
+}
+
 static int cmd(uint8_t addr, uint16_t cval, uint8_t *rxd, uint8_t rx_sz) {
 	uint8_t buf[2] = {cval>>8, cval&0xff};
 	return i2c_xfer(addr, buf, 2, rxd, rx_sz);
 }
 
 int shtc3_init(uint8_t addr) {
-	uint8_t rxd[3];
+	uint8_t rxd[3]={0,0,0};
 	int res = cmd(addr, CMD_READ_ID, rxd, sizeof(rxd));
 	if (res == 1)
-		res = (rxd[0]&8) && ((rxd[1]&0x3f) == 0x7);
+		res = (rxd[0]&8) && ((rxd[1]&0x3f) == 0x7) && crc_check_word(rxd);
 	return res;
 }
 
@@ -58,10 +61,11 @@ int shtc3_read(uint8_t addr, readings_t *vals) {
 	res = i2c_xfer(addr, NULL, 0, rxbuf, sizeof(rxbuf));
 	if(res < 1)
 		goto out;
-#ifdef DEBUG
-	printf("%x%x %x%x\n",rxbuf[0],rxbuf[1],rxbuf[3],rxbuf[4]);
-#endif
+
 	/* temperature */
+	res = crc_check_word(rxbuf);
+	if(!res)
+		goto out;
 	tmp = rxbuf[0];
 	tmp<<=8;
 	tmp|=rxbuf[1];
@@ -70,13 +74,18 @@ int shtc3_read(uint8_t addr, readings_t *vals) {
 	tmp>>=16;
 	tmp-=45;
 	vals->temperature = tmp;
+
 	/* humidity */
+	res = crc_check_word(rxbuf+3);
+	if(!res)
+		goto out;
 	tmp = rxbuf[3];
 	tmp<<=8;
 	tmp|=rxbuf[4];
 	tmp*=100;
 	tmp>>=16;
 	vals->relh = tmp;
+
 out:
 	return res;
 }
