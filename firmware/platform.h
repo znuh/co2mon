@@ -3,14 +3,14 @@
 #include <stdint.h>
 #include <stddef.h>
 
-#ifdef PLATFORM_ATMEGA328P    /* only platform with 'real' Harvard arch and special needs for ROM access */
+#ifdef PLATFORM_ATMEGA328P    /* only platform with 'real' Harvard arch and special needs for ROM (flash) access */
 #define F_CPU                 16000000UL
 #include <avr/pgmspace.h>
-#define FLASH_MEM             PROGMEM
-#define flash_read_byte(a)    pgm_read_byte(a)
+#define PLATFORM_FLASH_MEM      PROGMEM
+#define PLATFORM_READ_FLASH(a)  pgm_read_byte(a)
 #else  /* non-AVR */
-#define FLASH_MEM
-#define flash_read_byte(a)    (*(a))
+#define PLATFORM_FLASH_MEM
+#define PLATFORM_READ_FLASH(a)  (*(a))
 #endif
 
 void hw_init(int argc, char **argv);

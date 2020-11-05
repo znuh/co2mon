@@ -1,7 +1,7 @@
 #include "platform.h"
 #include <stdint.h>
 
-static const uint8_t font_30x40[] FLASH_MEM = {
+static const uint8_t font_30x40[] PLATFORM_FLASH_MEM = {
   /* chars: " 0123456789?" */
   /*  0: ' ' */
   0x00,   0x00,   0x00,   0x00,   0x00, 

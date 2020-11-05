@@ -38,7 +38,7 @@ static int cmd(uint8_t cmd) {
 	return i2c_xfer(SSD1306_I2C_ADDR, txbuf, sizeof(txbuf), NULL, 0);
 }
 
-static const uint8_t init_cmds[] FLASH_MEM = {
+static const uint8_t init_cmds[] PLATFORM_FLASH_MEM = {
 	SSD1306_DISPLAYOFF,
 	SSD1306_SETDISPLAYCLOCKDIV,
 	0x80,
@@ -128,7 +128,7 @@ static void oled_puts(uint8_t font, const char *str, uint8_t invert) {
 			uint8_t i;
 
 			for(i=f->w;i;i--,cp+=c_stride,bp++)
-				*bp = flash_read_byte(&(cp[0])) ^ invert; /* char loop for each column of font */
+				*bp = PLATFORM_READ_FLASH(&(cp[0])) ^ invert; /* char loop for each column of font */
 
 			disp.x+=f->w;
 		} /* string loop foreach char */
@@ -141,7 +141,7 @@ static void oled_puts(uint8_t font, const char *str, uint8_t invert) {
 uint8_t oled_init(void) {
 	uint8_t i;
 	for(i=0;i<sizeof(init_cmds);i++) {
-		uint8_t val = flash_read_byte(&(init_cmds[i]));
+		uint8_t val = PLATFORM_READ_FLASH(&(init_cmds[i]));
 		int res = cmd(val);
 		if(!res)
 			return 0;
@@ -188,7 +188,7 @@ uint8_t oled_update(readings_t *vals) {
 
 		/* derive degree sign by shifting 'o' up 2 pixels */
 		for(i=0;i<8;cp++)
-			txbuf[++i]=flash_read_byte(&(cp[0]))>>2;
+			txbuf[++i]=PLATFORM_READ_FLASH(&(cp[0]))>>2;
 		i2c_xfer(SSD1306_I2C_ADDR, txbuf, sizeof(txbuf), NULL, 0);
 		
 		txtbuf[6]='C';

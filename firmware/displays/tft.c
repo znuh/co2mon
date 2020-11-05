@@ -58,7 +58,7 @@ static void tft_write(int16_t cmd, const uint8_t *d, size_t data_n) {
 #define DISPLAY_WIDTH   160
 #define DISPLAY_HEIGHT  128
 
-static const uint8_t st77_init[] FLASH_MEM = {
+static const uint8_t st77_init[] PLATFORM_FLASH_MEM = {
 	/* Panel on */
 	//ST77_CMD_SWRESET, 0,
 	//ST77_CMD_SLPOUT,  0,
@@ -89,7 +89,7 @@ static const uint8_t st77_init[] FLASH_MEM = {
 	ST77_CMD_INVALID
 };
 
-static const uint8_t madctl_lut[] FLASH_MEM = {
+static const uint8_t madctl_lut[] PLATFORM_FLASH_MEM = {
 	ST77_MADCTL_MX | ST77_MADCTL_MY,
 	ST77_MADCTL_MY | ST77_MADCTL_MV,
 	0,
@@ -97,7 +97,7 @@ static const uint8_t madctl_lut[] FLASH_MEM = {
 };
 
 static void display_orientation(uint32_t i) {
-	uint8_t val = flash_read_byte(&(madctl_lut[i&3]));
+	uint8_t val = PLATFORM_READ_FLASH(&(madctl_lut[i&3]));
 	tft_write(ST77_CMD_MADCTL, &val, 1);
 }
 
@@ -164,7 +164,7 @@ static void rle_decode(const uint8_t **rp, uint8_t *buf, uint16_t n) {
 		if(rl) 
 			rl--;
 		else {
-			v = flash_read_byte(r++);
+			v = PLATFORM_READ_FLASH(r++);
 			if(v&0x80) 
 				col=(v<<1)|1;
 			else
@@ -225,8 +225,8 @@ static void draw_text(uint8_t xs, uint8_t ys, uint8_t font, const char *txt, uin
 			else { /* 1bpp horizontal packed */
 				shift = char_ofs&7; /* bits offset within bytes */
 				char_ofs>>=3; /* char offset in bytes */
-				bits = flash_read_byte(&(fd[char_ofs++]))>>shift;
-				bits|= flash_read_byte(&(fd[char_ofs]))<<(8-shift);
+				bits = PLATFORM_READ_FLASH(&(fd[char_ofs++]))>>shift;
+				bits|= PLATFORM_READ_FLASH(&(fd[char_ofs]))<<(8-shift);
 				for(x=0;x<cw;x++,bits>>=1,cp++)
 					*cp = colors[bits&1];
 			}
@@ -294,10 +294,10 @@ void tft_init(void) {
 	msleep(ST77_INIT_DELAY);
 
 	/* process list of init commands */
-	for(i=0; (cmd = flash_read_byte(&(st77_init[i]))) != ST77_CMD_INVALID; i++) {
-		uint8_t dlen = flash_read_byte(&(st77_init[++i]));
+	for(i=0; (cmd = PLATFORM_READ_FLASH(&(st77_init[i]))) != ST77_CMD_INVALID; i++) {
+		uint8_t dlen = PLATFORM_READ_FLASH(&(st77_init[++i]));
 		for(j=0;j<dlen;j++)
-			databuf[j] = flash_read_byte(&(st77_init[++i]));
+			databuf[j] = PLATFORM_READ_FLASH(&(st77_init[++i]));
 		tft_write(cmd, databuf, dlen);
 	}
 
