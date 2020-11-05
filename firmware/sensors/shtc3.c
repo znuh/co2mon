@@ -35,7 +35,7 @@ int shtc3_read(uint8_t addr, readings_t *vals);
 #define CRC8_POLY    0x31
 
 static int crc_check_word(const uint8_t *w) {
-	return crc8(CRC8_INIT, CRC8_POLY, w, 2) == w[3];
+	return crc8(CRC8_INIT, CRC8_POLY, w, 2) == w[2];
 }
 
 static int cmd(uint8_t addr, uint16_t cval, uint8_t *rxd, uint8_t rx_sz) {
