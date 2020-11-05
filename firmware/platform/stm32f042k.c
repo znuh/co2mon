@@ -112,12 +112,14 @@ typedef struct timeout_s {
 	uint32_t start;
 	uint32_t end;
 	int need_rollover;
+	int expired;
 } timeout_t;
 
 static void timeout_set(timeout_t *to, uint32_t timeout) {
 	to->start = jiffies;
 	to->end = to->start + timeout;
-	to->need_rollover = to->start >= to->end;
+	to->need_rollover = to->start >= to->end; /* ... */
+	to->expired = timeout == 0;
 }
 
 static int timeout(timeout_t *to) {
