@@ -54,19 +54,21 @@ typedef struct timeout_s {
 	uint16_t end;
 	uint8_t need_rollover;
 	uint8_t expired;
+	uint8_t rollover;
 } timeout_t;
 
 static void timeout_set(timeout_t *to, uint16_t ticks) {
 	to->start = t1ovf;
 	to->expired = ticks == 0;
-	to->end = to->start + ticks + 1; /* need to add 1 timer cycle b/c current cycle already started */
+	to->end = to->start + ticks + 1;          /* need to add 1 timer cycle b/c current cycle already started */
 	to->need_rollover = to->start >= to->end; /* ticks is at least 1 so equal case means a rollover too */
+	to->rollover = 0;
 }
 
 static int timeout(timeout_t *to) {
 	uint16_t now = t1ovf;
-	to->need_rollover &= now >= to->start; /* if set, keep bit set until now < start */
-	to->expired |= (now >= to->end) && (!to->need_rollover);
+	to->rollover |= now < to->start;
+	to->expired  |= ((now >= to->end) && (to->rollover >= to->need_rollover)) || (to->rollover > to->need_rollover);
 	return to->expired;
 }
 

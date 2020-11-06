@@ -99,19 +99,21 @@ typedef struct timeout_s {
 	uint32_t end;
 	int need_rollover;
 	int expired;
+	int rollover;
 } timeout_t;
 
 static void timeout_set(timeout_t *to, uint32_t ticks) {
 	to->start = jiffies;
 	to->expired = ticks == 0;
-	to->end = to->start + ticks + 1; /* need to add 1 timer cycle b/c current cycle already started */
+	to->end = to->start + ticks + 1;          /* need to add 1 timer cycle b/c current cycle already started */
 	to->need_rollover = to->start >= to->end; /* ticks is at least 1 so equal case means a rollover too */
+	to->rollover = 0;
 }
 
 static int timeout(timeout_t *to) {
 	uint32_t now = jiffies;
-	to->need_rollover &= now >= to->start; /* if set, keep bit set until now < start */
-	to->expired |= (now >= to->end) && (!to->need_rollover);
+	to->rollover |= now < to->start;
+	to->expired  |= ((now >= to->end) && (to->rollover >= to->need_rollover)) || (to->rollover > to->need_rollover);
 	return to->expired;
 }
 
