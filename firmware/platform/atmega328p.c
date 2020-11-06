@@ -87,10 +87,14 @@ static void twi_init(void) {
 	TWCR = (1<<TWEN);
 }
 
+#define I2C_TIMEOUT           40   /* maximum of 40 msec for clock stretching   */
+
 static int twi_wait(void) {
-	uint8_t timeout;
-	for(timeout=0xff; (!(TWCR & _BV(TWINT))) && (timeout); timeout--) {}
-	return timeout ? (TWSR & 0xF8) : -1;
+	timeout_t to;
+	int expired;
+	timeout_set(&to, MS_TO_TICKS(I2C_TIMEOUT));
+	while((!(TWCR & _BV(TWINT))) && (!(expired=timeout(&to)))) {}
+	return expired ? -1 : (TWSR & 0xF8);
 }
 
 static int twi_action(uint8_t flags) {
