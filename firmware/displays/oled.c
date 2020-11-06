@@ -133,7 +133,7 @@ static void oled_puts(uint8_t font, const char *str, uint8_t invert) {
 			disp.x+=f->w;
 		} /* string loop foreach char */
 
-		i2c_xfer(SSD1306_I2C_ADDR, i2cbuf, bp-i2cbuf, NULL, 0);	
+		i2c_xfer(SSD1306_I2C_ADDR, i2cbuf, bp-i2cbuf, NULL, 0);
 
 	} /* y-loop for font->h > 8 */
 }
