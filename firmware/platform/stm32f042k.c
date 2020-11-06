@@ -83,9 +83,10 @@ static void gpio_setup(void) {
 	gpio_clear(GPIOF, GPIO1|GPIO0);
 }
 
-#define HZ      100
-#define MSEC    (1000/HZ)
-#define SEC     (1000*MSEC)
+#define HZ                100
+#define MSEC             (1000/HZ)
+#define SEC              (1000*MSEC)
+#define MS_TO_TICKS(a)   (((a)+(MSEC-1))/MSEC)
 
 static volatile uint32_t jiffies = 0;
 
@@ -93,21 +94,6 @@ void sys_tick_handler(void) {
 	jiffies++;
 }
 
-static void wait_until(uint32_t ts) {
-	while(ts < jiffies) { __WFI(); } /* uint32 rollover case */
-	while(jiffies < ts) { __WFI(); }
-}
-
-void msleep(uint16_t val) {
-	wait_until(jiffies + ((val+(MSEC-1))/MSEC) + 1);
-}
-
-static void udelay(uint32_t n) {
-	while(n--)
-		__asm__("nop");
-}
-
-#if 0
 typedef struct timeout_s {
 	uint32_t start;
 	uint32_t end;
@@ -115,17 +101,31 @@ typedef struct timeout_s {
 	int expired;
 } timeout_t;
 
-static void timeout_set(timeout_t *to, uint32_t timeout) {
+static void timeout_set(timeout_t *to, uint32_t ticks) {
 	to->start = jiffies;
-	to->end = to->start + timeout;
-	to->need_rollover = to->start >= to->end; /* ... */
-	to->expired = timeout == 0;
+	to->expired = ticks == 0;
+	to->end = to->start + ticks + 1; /* need to add 1 timer cycle b/c current cycle already started */
+	to->need_rollover = to->start >= to->end; /* ticks is at least 1 so equal case means a rollover too */
 }
 
 static int timeout(timeout_t *to) {
-	return 0; /* TODO */
+	uint32_t now = jiffies;
+	to->need_rollover &= now >= to->start; /* if set, keep bit set until now < start */
+	to->expired |= (now >= to->end) && (!to->need_rollover);
+	return to->expired;
 }
-#endif
+
+void msleep(uint16_t val) {
+	timeout_t to;
+	timeout_set(&to, MS_TO_TICKS(val));
+	while(!timeout(&to))
+		__WFI();
+}
+
+static void udelay(uint32_t n) {
+	while(n--)
+		__asm__("nop");
+}
 
 static void clock_setup(void) {
 	rcc_clock_setup_in_hsi_out_48mhz();
@@ -157,9 +157,9 @@ static void spi_setup(void) {
 #define I2C_READ              1
 #define I2C_WRITE             0
 #define I2C_HALFCYCLE_DELAY   21   /* measured and tuned for 99kHz @48MHz F_CPU */
+#define I2C_TIMEOUT           40   /* maximum of 40 msec for clock stretching   */
 
-/* TODO: clock stretching w/ timeout 
- * expects SCL low 
+/* expects SCL low 
  * returns w/ SCL low */
 static inline int i2c_cycle(int sda) {
 	int res;
@@ -174,8 +174,14 @@ static inline int i2c_cycle(int sda) {
 	gpio_set(I2C_PORT, I2C_SCL);
 	udelay(I2C_HALFCYCLE_DELAY);
 
-	/* TODO: clock stretching w/ timeout */
-	while(!(gpio_get(I2C_PORT, I2C_SCL))) {}
+	/* clock stretching active? */
+	if(!gpio_get(I2C_PORT, I2C_SCL)) {
+		timeout_t to;
+		timeout_set(&to, MS_TO_TICKS(I2C_TIMEOUT));
+		while((!(res=gpio_get(I2C_PORT, I2C_SCL))) && (!timeout(&to))) {}
+		if(!res)
+			return -1;
+	}
 
 	/* sample SDA */
 	res = gpio_get(I2C_PORT, I2C_SDA) != 0;
@@ -339,18 +345,16 @@ void usart1_isr(void) {
 }
 
 int uart_rx(int ch, void *p, size_t n, uint16_t timeout_ms) {
-	uint32_t put, get, timeout=timeout_ms;
+	uint32_t put, get;
 	int res=0, can_read;
+	timeout_t to;
 	uint8_t *d=p;
 
 	if(ch != UART_SENSOR_CH) /* not (yet) implemented */
 		return 0;
 
-	timeout+=(MSEC>>1); /* round up */
-	timeout/=MSEC;
-	timeout+=jiffies;
-
-	while(((unsigned)res<n) && (jiffies != timeout)) { /* TODO: more robust jiffies rollover handling? */
+	timeout_set(&to, MS_TO_TICKS(timeout_ms));
+	while(((unsigned)res<n) && (!timeout(&to))) {
 		nvic_disable_irq(NVIC_USART1_IRQ);
 		put=rx_put; get=rx_get;
 		can_read = (get != put);

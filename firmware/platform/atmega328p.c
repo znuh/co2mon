@@ -43,18 +43,37 @@
  */
 
 static volatile uint16_t t1ovf = 0; /* ~244.14 Hz (~4.098ms) */
+#define MS_TO_TICKS(a)   (((a)+3)>>2) /* round up */
 
 ISR(TIMER1_OVF_vect) {
 	t1ovf++;
 }
 
+typedef struct timeout_s {
+	uint16_t start;
+	uint16_t end;
+	uint8_t need_rollover;
+	uint8_t expired;
+} timeout_t;
+
+static void timeout_set(timeout_t *to, uint16_t ticks) {
+	to->start = t1ovf;
+	to->expired = ticks == 0;
+	to->end = to->start + ticks + 1; /* need to add 1 timer cycle b/c current cycle already started */
+	to->need_rollover = to->start >= to->end; /* ticks is at least 1 so equal case means a rollover too */
+}
+
+static int timeout(timeout_t *to) {
+	uint16_t now = t1ovf;
+	to->need_rollover &= now >= to->start; /* if set, keep bit set until now < start */
+	to->expired |= (now >= to->end) && (!to->need_rollover);
+	return to->expired;
+}
+
 void msleep(uint16_t val) {
-	val+=3; /* round up */
-	val>>=2;
-	val+=t1ovf+1;
-	while(val < t1ovf) /* uint16 rollover case */
-		sleep_cpu();
-	while(t1ovf < val)
+	timeout_t to;
+	timeout_set(&to, MS_TO_TICKS(val));
+	while(!timeout(&to))
 		sleep_cpu();
 }
 
@@ -67,8 +86,8 @@ static void twi_init(void) {
 }
 
 static int twi_wait(void) {
-	uint16_t timeout;
-	for(timeout=0xffff; (!(TWCR & _BV(TWINT))) && (timeout); timeout--) {}
+	uint8_t timeout;
+	for(timeout=0xff; (!(TWCR & _BV(TWINT))) && (timeout); timeout--) {}
 	return timeout ? (TWSR & 0xF8) : -1;
 }
 
@@ -238,13 +257,14 @@ int uart_tx(int ch, const void *p, size_t n) {
 int uart_rx(int ch, void *p, size_t n, uint16_t timeout_ms) {
 	uint8_t *d=p;
 	uint8_t put, get, can_read;
+	timeout_t to;
 	int res=0;
+
 	if(ch != UART_SENSOR_CH) /* not (yet) implemented */
 		return 0;
-	timeout_ms+=3; /* round up */
-	timeout_ms>>=2;
-	timeout_ms+=t1ovf;
-	while((res<n) && (t1ovf != timeout_ms)) { /* TODO: more robust t1ovf rollover handling? */
+
+	timeout_set(&to, MS_TO_TICKS(timeout_ms));
+	while((res<n) && (!timeout(&to))) {
 		cli();
 		put=rx_put; get=rx_get;
 		can_read = (get != put);

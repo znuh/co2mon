@@ -83,7 +83,7 @@ static void serial_printvals(readings_t *v) {
 }
 
 /* TODOs:
- * - AVR/STM32: better handling for timer rollover in uart_rx/i2c
+ * - AVR/STM32: verify timeout code
  * - STM32: send values via USB to host
  */
 int main(int argc, char **argv) {
