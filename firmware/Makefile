@@ -27,9 +27,11 @@ DEVICE=stm32f042k6t6
 INCLUDES += $(patsubst %,-I%, . $(SHARED_DIR))
 OPENCM3_DIR=libopencm3
 
-include $(OPENCM3_DIR)/mk/genlink-config.mk
-include stm32-rules.mk
-include $(OPENCM3_DIR)/mk/genlink-rules.mk
+# AVR build shall be possible w/o libopencm3
+# therefor ignore libopencm3-specific includes if not found
+-include $(OPENCM3_DIR)/mk/genlink-config.mk
+-include stm32-rules.mk
+-include $(OPENCM3_DIR)/mk/genlink-rules.mk
 
 stm32: all
 	$(PREFIX)size $(ELF_FILE)
