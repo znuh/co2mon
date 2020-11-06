@@ -169,7 +169,7 @@ uint8_t oled_update(readings_t *vals) {
 	if(CO2_VALID(vals))
 		i16_to_dec(vals->co2,txtbuf,4,-1,0);
 	goto_xy(6,0);
-	oled_puts(OLED_DIGITS_28x40, txtbuf, PUTS_NORMAL);
+	oled_puts(OLED_DIGITS_29x40, txtbuf, PUTS_NORMAL);
 
 	memset(txtbuf,' ',16);
 

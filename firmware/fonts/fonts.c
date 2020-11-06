@@ -24,7 +24,8 @@
 //#include "font_12x16.h"
 
 //#include "digits_27x40.h"
-#include "digits_28x40.h"
+//#include "digits_28x40.h"
+#include "digits_29x40.h"
 //#include "digits_30x40.h"
 
 #include "12x27-1bpp-hpacked-92chars.h"
@@ -33,16 +34,17 @@
 const char font_digits[13] = " 0123456789?";
 
 const font_t fonts[] = {
-	{.data = font_8x8  , .w = 8 , .h = 8 , .flags = FONTFLG_1BPP|FONTFLG_VPACK, .n_chars = 95, .index = NULL, .char_ofs = ' '}, /* OLED vertical byte-packed 1bpp, glyph data:  760 Bytes */
-//	{.data = font_12x16, .w = 12, .h = 16, .flags = FONTFLG_1BPP|FONTFLG_VPACK, .n_chars = 95, .index = NULL, .char_ofs = ' '}, /* OLED vertical byte-packed 1bpp, glyph data: 2280 Bytes */
+	{.data = font_8x8  ,   .w = 8 , .h = 8 , .flags = FONTFLG_1BPP|FONTFLG_VPACK, .n_chars = 95, .index = NULL, .char_ofs = ' '}, /* OLED vertical byte-packed 1bpp, glyph data:  760 Bytes */
+//	{.data = font_12x16,   .w = 12, .h = 16, .flags = FONTFLG_1BPP|FONTFLG_VPACK, .n_chars = 95, .index = NULL, .char_ofs = ' '}, /* OLED vertical byte-packed 1bpp, glyph data: 2280 Bytes */
 	
-//	{.data = font_27x40, .w = 27, .h = 40, .flags = FONTFLG_1BPP|FONTFLG_VPACK, .n_chars = 12, .index = font_digits, .char_ofs = 0}, /* OLED vertical byte-packed 1bpp, glyph data: 1620 Bytes */
-	{.data = font_28x40, .w = 28, .h = 40, .flags = FONTFLG_1BPP|FONTFLG_VPACK, .n_chars = 12, .index = font_digits, .char_ofs = 0}, /* OLED vertical byte-packed 1bpp, glyph data: 1680 Bytes */
-//	{.data = font_30x40, .w = 30, .h = 40, .flags = FONTFLG_1BPP|FONTFLG_VPACK, .n_chars = 12, .index = font_digits, .char_ofs = 0}, /* OLED vertical byte-packed 1bpp, glyph data: 1800 Bytes */
+//	{.data = font_27x40,   .w = 27, .h = 40, .flags = FONTFLG_1BPP|FONTFLG_VPACK, .n_chars = 12, .index = font_digits, .char_ofs = 0}, /* OLED vertical byte-packed 1bpp, glyph data: 1620 Bytes */
+//	{.data = font_28x40,   .w = 28, .h = 40, .flags = FONTFLG_1BPP|FONTFLG_VPACK, .n_chars = 12, .index = font_digits, .char_ofs = 0}, /* OLED vertical byte-packed 1bpp, glyph data: 1680 Bytes */
+	{.data = digits_29x40, .w = 29, .h = 40, .flags = FONTFLG_1BPP|FONTFLG_VPACK, .n_chars = 12, .index = font_digits, .char_ofs = 0}, /* OLED vertical byte-packed 1bpp, glyph data: 1740 Bytes */
+//	{.data = font_30x40,   .w = 30, .h = 40, .flags = FONTFLG_1BPP|FONTFLG_VPACK, .n_chars = 12, .index = font_digits, .char_ofs = 0}, /* OLED vertical byte-packed 1bpp, glyph data: 1800 Bytes */
 
 	{.data = font_12x27_hpacked, .w = 12, .h = 27, .flags = FONTFLG_1BPP, .n_chars = 92, .index = NULL, .char_ofs = ' '}, /* TFT horizontal byte-packed 1bpp, glyph data: 3726 Bytes */
 	{.data = digits_38x50_rle,   .w = 38, .h = 50, .flags = FONTFLG_RLE, .n_chars = 12, .index = font_digits, .char_ofs = 0} /* TFT run-lenth encoded grayscale, rl encoded: 5043 Bytes */
-}; /* total size: 760+1680+3726+5043 = 11209 Bytes */
+}; /* total size: 760+1740+3726+5043 = 11269 Bytes */
 
 uint8_t font_index(const font_t *f, char c) {
 	uint8_t res;
