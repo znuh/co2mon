@@ -46,12 +46,28 @@ int shtc3_read(uint8_t addr, readings_t *vals);
 int mhzxx_init(uint8_t addr);
 int mhzxx_read(uint8_t addr, readings_t *vals);
 
+/* if values for temp/rhel/co2 are provided by multiple
+ * sensors, sensors later in this list "win"
+ * b/c they overwrite the values provided by
+ * previous sensors. */
 static const sensor_t sensors[] = {
-	/* if values for temp/rhel/co2 are provided by multiple
-	 * sensors, sensors later in this list "win"
-	 * b/c they overwrite the values provided by
-	 * previous sensors.
-	 * therefor we move the SHTC3 to the top -
+	{
+		.iface = IFACE_UART,
+		.addr  = 0,
+		.name  = "MH-Zxx",    /* MH-Z14A, MH-Z19B: CO2 only */
+		.init  = mhzxx_init,
+		.read  = mhzxx_read,
+	},
+	/* temperature of SCD30 doesn't seem to be too accurate
+	 * therefor we move it up in this list */
+	{
+		.iface = IFACE_I2C,
+		.addr  = 0x61,
+		.name  = "SCD30",     /* CO2, temperature, humidity */
+		.init  = scd30_init,
+		.read  = scd30_read,
+	},
+	/* move SHTC3 up in this list
 	 * b/c it's heated a bit by the co2mon PCB
 	 * when mounted directly on the PCB */
 	{
@@ -81,20 +97,6 @@ static const sensor_t sensors[] = {
 		.name  = "LM75",     /* temperature */
 		.init  = lm75_init,
 		.read  = lm75_read,
-	},
-	{
-		.iface = IFACE_I2C,
-		.addr  = 0x61,
-		.name  = "SCD30",     /* CO2, temperature, humidity */
-		.init  = scd30_init,
-		.read  = scd30_read,
-	},
-	{
-		.iface = IFACE_UART,
-		.addr  = 0,
-		.name  = "MH-Zxx",    /* MH-Z14A, MH-Z19B: CO2 only */
-		.init  = mhzxx_init,
-		.read  = mhzxx_read,
 	},
 	{
 		.iface = 0,
