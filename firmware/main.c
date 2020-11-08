@@ -83,6 +83,7 @@ static void serial_printvals(readings_t *v) {
 }
 
 /* TODOs:
+ * - use watchdog
  * - STM32: send values via USB to host
  */
 int main(int argc, char **argv) {

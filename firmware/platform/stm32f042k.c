@@ -3,7 +3,6 @@
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/stm32/gpio.h>
 #include <libopencm3/stm32/spi.h>
-#include <libopencm3/stm32/i2c.h>
 #include <libopencm3/stm32/usart.h>
 
 #include <libopencmsis/core_cm3.h>
@@ -136,7 +135,6 @@ static void clock_setup(void) {
 	rcc_periph_clock_enable(RCC_GPIOF);
 	rcc_periph_clock_enable(RCC_SPI1);
 	rcc_periph_clock_enable(RCC_USART1);
-	rcc_periph_clock_enable(RCC_I2C1);
 }
 
 static void systick_setup(void) {
