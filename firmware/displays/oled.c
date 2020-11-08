@@ -173,7 +173,10 @@ uint8_t oled_update(readings_t *vals) {
 	goto_xy(0, 5);
 	oled_puts(OLED_TEXT_8x8, "        ppm CO2 ", PUTS_NORMAL);
 
+	/* draw empty line */
 	memset(txtbuf,' ',16);
+	goto_xy(0, 6);
+	oled_puts(OLED_TEXT_8x8, txtbuf, PUTS_NORMAL);
 
 	/* temperature */
 	if(TEMP_VALID(vals)) {
