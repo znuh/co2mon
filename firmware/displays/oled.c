@@ -160,8 +160,6 @@ uint8_t oled_update(readings_t *vals) {
 	/* no need to redraw static 'ppm CO2' string every time */
 	if(first_run) {
 		clear();
-		goto_xy(128-(8*7), 5);
-		oled_puts(OLED_TEXT_8x8, "ppm CO2", PUTS_NORMAL);
 		first_run=0;
 	}
 
@@ -170,6 +168,10 @@ uint8_t oled_update(readings_t *vals) {
 		i16_to_dec(vals->co2,txtbuf,4,-1,0);
 	goto_xy(6,0);
 	oled_puts(OLED_DIGITS_29x40, txtbuf, PUTS_NORMAL);
+
+	/* always redraw 'ppm CO2' string b/c sometimes it seems to get garbled? */
+	goto_xy(0, 5);
+	oled_puts(OLED_TEXT_8x8, "        ppm CO2 ", PUTS_NORMAL);
 
 	memset(txtbuf,' ',16);
 

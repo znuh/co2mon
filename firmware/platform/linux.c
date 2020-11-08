@@ -155,7 +155,10 @@ static void uart_set_vtime(int ch, uint32_t vtime) {
 }
 
 int uart_tx(int ch, const void *p, size_t n) {
-	return uart_fd < 0 ? 0 : write(uart_fd, p, n);
+	if(ch == UART_SYS_CH)
+		return write(1,p,n); /* write to stdout */
+	else
+		return uart_fd < 0 ? 0 : write(uart_fd, p, n);
 }
 
 int uart_rx(int ch, void *p, size_t n, uint16_t timeout_ms) {
