@@ -1,0 +1,1 @@
+## important: kicad-nightly needed!
