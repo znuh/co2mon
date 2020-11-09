@@ -91,7 +91,7 @@ static void twi_init(void) {
 
 static int twi_wait(void) {
 	timeout_t to;
-	int expired;
+	int expired=0;
 	timeout_set(&to, MS_TO_TICKS(I2C_TIMEOUT));
 	while((!(TWCR & _BV(TWINT))) && (!(expired=timeout(&to)))) {}
 	return expired ? -1 : (TWSR & 0xF8);
