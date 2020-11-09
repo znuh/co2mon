@@ -45,6 +45,14 @@
 static volatile uint16_t t1ovf = 0; /* ~244.14 Hz (~4.098ms) */
 #define MS_TO_TICKS(a)   (((a)+3)>>2) /* round up */
 
+static uint16_t read_jiffies(void) {
+	uint16_t res;
+	cli();
+	res = t1ovf;
+	sei();
+	return res;
+}
+
 ISR(TIMER1_OVF_vect) {
 	t1ovf++;
 }
@@ -58,7 +66,7 @@ typedef struct timeout_s {
 } timeout_t;
 
 static void timeout_set(timeout_t *to, uint16_t ticks) {
-	to->start = t1ovf;
+	to->start = read_jiffies();
 	to->expired = ticks == 0;
 	to->end = to->start + ticks + 1;          /* need to add 1 timer cycle b/c current cycle already started */
 	to->need_rollover = to->start >= to->end; /* ticks is at least 1 so equal case means a rollover too */
@@ -66,7 +74,7 @@ static void timeout_set(timeout_t *to, uint16_t ticks) {
 }
 
 static int timeout(timeout_t *to) {
-	uint16_t now = t1ovf;
+	uint16_t now = read_jiffies();
 	to->rollover |= now < to->start;
 	to->expired  |= ((now >= to->end) && (to->rollover >= to->need_rollover)) || (to->rollover > to->need_rollover);
 	return to->expired;
