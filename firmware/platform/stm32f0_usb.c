@@ -207,12 +207,7 @@ static enum usbd_request_return_codes cdcacm_control_request(usbd_device *usbd_d
 
 static void cdcacm_data_rx_cb(usbd_device *usbd_dev, uint8_t ep) {
 	char buf[64];
-	int len = usbd_ep_read_packet(usbd_dev, 0x01, buf, 64);
-
-	if (len) {
-		usbd_ep_write_packet(usbd_dev, 0x82, buf, len);
-		buf[len] = 0;
-	}
+	usbd_ep_read_packet(usbd_dev, 0x01, buf, 64);
 	ep=ep;
 }
 
@@ -235,10 +230,9 @@ void usb_isr(void) {
 		usbd_poll(usbd_dev);
 }
 
-int  usb_tx(const void *p, size_t n) {
-	p=p;
-	/* TBD */
-	return n;
+/* TODO: enqueue, send upon \n ? */
+int usb_tx(const void *p, size_t n) {
+	return usbd_dev ? usbd_ep_write_packet(usbd_dev, 0x82, p, n) : 0;
 }
 
 void usb_setup(void) {
