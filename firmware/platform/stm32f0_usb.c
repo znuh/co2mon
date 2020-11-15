@@ -23,6 +23,7 @@
 #include <libopencm3/usb/cdc.h>
 #include <libopencm3/cm3/nvic.h>
 #include <stdlib.h>
+#include <string.h>
 
 static const struct usb_device_descriptor dev = {
   .bLength = USB_DT_DEVICE_SIZE,
@@ -208,9 +209,17 @@ static enum usbd_request_return_codes cdcacm_control_request(usbd_device *usbd_d
 	return USBD_REQ_NOTSUPP;
 }
 
+static const char bl_string[] = "ICANHAZBOOTLOADER";
+
+extern void start_bootloader(void);
+
 static void cdcacm_data_rx_cb(usbd_device *usbd_dev, uint8_t ep) {
 	char buf[64];
-	usbd_ep_read_packet(usbd_dev, 0x01, buf, 64);
+	int len = usbd_ep_read_packet(usbd_dev, 0x01, buf, 64);
+	if((len >= (int)(sizeof(bl_string)-1)) && (!memcmp(buf,bl_string,sizeof(bl_string)-1))) {
+		usbd_disconnect(usbd_dev, true);
+		start_bootloader();
+	}
 	ep=ep;
 }
 

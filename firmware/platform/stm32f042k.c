@@ -21,10 +21,12 @@
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/stm32/gpio.h>
 #include <libopencm3/stm32/spi.h>
+#include <libopencm3/stm32/flash.h>
 #include <libopencm3/stm32/usart.h>
 
 #include <libopencmsis/core_cm3.h>
 
+#include <libopencm3/cm3/scb.h>
 #include <libopencm3/cm3/nvic.h>
 #include <libopencm3/cm3/systick.h>
 
@@ -35,6 +37,7 @@
 
 extern int  usb_tx(const void *p, size_t n);
 extern void usb_setup(void);
+void start_bootloader(void);
 
 /* IO assignments:
  * 
@@ -403,6 +406,28 @@ void spi_tx(const void *p, size_t n) {
 	const uint8_t *d=p;
 	for(;n;n--,d++)
 		spi_send8(SPI1, *d);
+}
+
+void bl_ram_func(void);
+
+__attribute__( ( long_call, section(".data#") ) ) void bl_ram_func(void) {   /* extra # after section name mutes the asm warning m) */
+	FLASH_CR |= FLASH_CR_PER;
+	FLASH_AR = 0x08000000; /* erase the page of the vetor table to enforce bootloader mode */
+	FLASH_CR |= FLASH_CR_STRT;
+
+	while(FLASH_SR & FLASH_SR_BSY) {} /* busywait */
+	FLASH_CR &= ~FLASH_CR_PER;
+
+	SCB_AIRCR = SCB_AIRCR_VECTKEY | SCB_AIRCR_SYSRESETREQ; /* trigger system reset via SCB */
+	while(1) {}
+}
+
+void start_bootloader(void) {
+	udelay(65536);                /* wait a bit after USB disconnect - msleep would require the timer interrupt */
+	cm_disable_interrupts();
+	flash_unlock();
+	flash_wait_for_last_operation();
+	bl_ram_func();
 }
 
 void hw_init(int argc, char **argv) {
