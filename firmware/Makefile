@@ -17,7 +17,7 @@ COMMON_FILES += displays/oled.c displays/tft.c
 COMMON_FILES += fonts/fonts.c
 
 # STM32 target for libopencm3 makefile rules
-CFILES = $(COMMON_FILES) platform/stm32f042k.c
+CFILES = $(COMMON_FILES) platform/stm32f042k.c platform/stm32f0_usb.c
 TGT_CFLAGS += $(STM32_ARGS)
 
 DEVICE=stm32f042k6t6

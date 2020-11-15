@@ -1,3 +1,21 @@
+/*
+ * This file is part of the co2mon project.
+ *
+ * Copyright (C) 2020 Benedikt Heinz <hunz@mailbox.org>
+ *
+ * This is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This code is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this code.  If not, see <http://www.gnu.org/licenses/>.
+ */
 #include "platform.h"
 
 #include <libopencm3/stm32/rcc.h>
@@ -14,6 +32,9 @@
 #include <inttypes.h>
 
 #include "utils.h"
+
+extern int  usb_tx(const void *p, size_t n);
+extern void usb_setup(void);
 
 /* IO assignments:
  * 
@@ -320,7 +341,7 @@ void uart_config(int ch, uint32_t baudrate) {
 int uart_tx(int ch, const void *p, size_t n) {
 	const uint8_t *d=p;
 	if(ch != UART_SENSOR_CH)
-		return n;
+		return usb_tx(p,n);
 	for(;n;n--,d++)
 		usart_send_blocking(USART1, *d);
 	return n;
@@ -391,4 +412,5 @@ void hw_init(int argc, char **argv) {
 	gpio_setup();
 	spi_setup();
 	uart_setup();
+	usb_setup();
 }
