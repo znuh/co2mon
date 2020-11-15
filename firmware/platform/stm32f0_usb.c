@@ -167,6 +167,9 @@ static const char *usb_strings[] = {
 int  usb_tx(const void *p, size_t n);
 void usb_setup(void);
 
+static int usb_active = 0;
+static usbd_device *usb_dev = NULL;
+
 /* Buffer to be used for control requests. */
 static uint8_t usbd_control_buffer[128];
 
@@ -221,27 +224,26 @@ static void cdcacm_set_config(usbd_device *usbd_dev, uint16_t wValue) {
 				USB_REQ_TYPE_TYPE | USB_REQ_TYPE_RECIPIENT,
 				cdcacm_control_request);
 	wValue = wValue;
+	usb_active = 1;
 }
 
-static usbd_device *usbd_dev = NULL;
-
 void usb_isr(void) {
-	if(usbd_dev)
-		usbd_poll(usbd_dev);
+	if(usb_dev)
+		usbd_poll(usb_dev);
 }
 
 /* TODO: enqueue, send upon \n ? */
 int usb_tx(const void *p, size_t n) {
-	return usbd_dev ? usbd_ep_write_packet(usbd_dev, 0x82, p, n) : 0;
+	return (usb_active && usb_dev) ? usbd_ep_write_packet(usb_dev, 0x82, p, n) : 0;
 }
 
 void usb_setup(void) {
 	crs_autotrim_usb_enable();
-	usbd_dev = usbd_init(&st_usbfs_v2_usb_driver, &dev, &config, usb_strings,
+	usb_dev = usbd_init(&st_usbfs_v2_usb_driver, &dev, &config, usb_strings,
 						sizeof(usb_strings)/sizeof(char *),
 						usbd_control_buffer, sizeof(usbd_control_buffer));
 
-	usbd_register_set_config_callback(usbd_dev, cdcacm_set_config);
+	usbd_register_set_config_callback(usb_dev, cdcacm_set_config);
 
 	nvic_enable_irq(NVIC_USB_IRQ);
 }
