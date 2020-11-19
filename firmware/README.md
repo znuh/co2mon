@@ -13,6 +13,7 @@
 * run **make stm32**
 
 ## flashing the STM32
+* **NOTE:** MH-Zxx sensors must be disconnected before starting the bootloader (otherwise the STM32 bootloader will try talking to the MH-Z sensor and USB will not work)
 * make sure *dfu-util* is installed
 * set the *BOOT_SEL* jumper (JP1) before connecting the board to your computer
 * run **dfu-util -a 0 --dfuse-address 0x08000000 -D co2mon.bin**
