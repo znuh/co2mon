@@ -38,7 +38,7 @@ stm32: all
 
 stm32_flash: stm32 $(PROJECT).bin
 	echo ICANHAZBOOTLOADER > /dev/ttyACM0
-	sleep 1
+	sleep 2
 	dfu-util -a 0 -s 0x08000000:leave -D $(PROJECT).bin
 
 linux:

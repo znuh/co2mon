@@ -423,7 +423,7 @@ __attribute__( ( long_call, section(".data#") ) ) void bl_ram_func(void) {   /* 
 }
 
 void start_bootloader(void) {
-	udelay(65536);                /* wait a bit after USB disconnect - msleep would require the timer interrupt */
+	udelay(1024*1024*4);                /* wait a bit after USB disconnect - msleep would require the timer interrupt */
 	cm_disable_interrupts();
 	flash_unlock();
 	flash_wait_for_last_operation();

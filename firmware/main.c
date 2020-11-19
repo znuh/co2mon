@@ -27,7 +27,7 @@
 #define PROJECT_STRING    "znu.nz/co2mon"
 /* length of platform string (defined in Makefile) must be <= 10,
  * firmware string length must be <= 10 */
-#define FIRMWARE_STRING   "v0.1-rc2"
+#define FIRMWARE_STRING   "v0.1-rc3"
 
 static void print_info(void) {
 	char display[14]="display: ";
@@ -83,8 +83,7 @@ static void serial_printvals(readings_t *v) {
 }
 
 /* TODOs:
- * - use watchdog
- * - STM32: send values via USB to host
+ * - use watchdog?
  */
 int main(int argc, char **argv) {
 	readings_t vals;

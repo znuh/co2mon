@@ -19,11 +19,13 @@
  */
 
 #include <libopencm3/stm32/crs.h>
+#include <libopencm3/stm32/st_usbfs.h>
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/usb/cdc.h>
 #include <libopencm3/cm3/nvic.h>
 #include <stdlib.h>
 #include <string.h>
+#include "utils.h"
 
 static const struct usb_device_descriptor dev = {
   .bLength = USB_DT_DEVICE_SIZE,
@@ -223,9 +225,72 @@ static void cdcacm_data_rx_cb(usbd_device *usbd_dev, uint8_t ep) {
 	ep=ep;
 }
 
+#define USB_TXBUF_SZ          128
+static uint32_t usb_tx_put    = 0;
+static uint32_t usb_tx_get    = 0;
+static uint32_t usb_tx_fill   = 0;
+static uint8_t  usb_txbuf[USB_TXBUF_SZ];
+static uint32_t usb_tx_active = 0;
+
+static void cdcacm_data_tx_cb(usbd_device *usbd_dev, uint8_t ep) {
+	if((!usb_active) || (!usb_tx_fill)) {
+		usb_tx_active = 0;
+		return;
+	}
+
+	usb_tx_active = 1;
+	ep&=0x7f;
+	if ((*USB_EP_REG(ep) & USB_EP_TX_STAT) != USB_EP_TX_STAT_VALID) { /* check if busy */
+		volatile uint16_t *PM = (volatile void *)USB_GET_EP_TX_BUFF(ep);
+		uint32_t i, len = MIN(usb_tx_fill, 64);
+		uint16_t buf = 0;
+
+		/* write 16bit words */
+		for(i=0;i<len;i++) {
+			buf>>=8;
+			buf|=usb_txbuf[usb_tx_get++]<<8;
+			usb_tx_get&=(USB_TXBUF_SZ-1);
+			if(i&1)
+				*PM++ = buf;
+		}
+
+		/* write remaining byte if odd length */
+		if(len&1)
+			*PM++ = buf>>8;
+
+		USB_SET_EP_TX_COUNT(ep, len);
+		USB_SET_EP_TX_STAT(ep, USB_EP_TX_STAT_VALID);
+
+		usb_tx_fill -= len;
+	}
+	usbd_dev = usbd_dev; /* mute compiler warning */
+}
+
+int usb_tx(const void *p, size_t n) {
+	const uint8_t *d = p;
+	int res;
+
+	nvic_disable_irq(NVIC_USB_IRQ);
+
+	res = MIN(USB_TXBUF_SZ - usb_tx_fill, n);
+
+	for(n=res;n;n--,d++) {
+		usb_txbuf[usb_tx_put++] = *d;
+		usb_tx_put &= (USB_TXBUF_SZ-1);
+	}
+
+	usb_tx_fill += res;
+
+	if((usb_tx_fill) && (!usb_tx_active))
+		cdcacm_data_tx_cb(usb_dev, 0x82); /* send 1st chunk */
+
+	nvic_enable_irq(NVIC_USB_IRQ);
+	return res;
+}
+
 static void cdcacm_set_config(usbd_device *usbd_dev, uint16_t wValue) {
 	usbd_ep_setup(usbd_dev, 0x01, USB_ENDPOINT_ATTR_BULK, 64, cdcacm_data_rx_cb);
-	usbd_ep_setup(usbd_dev, 0x82, USB_ENDPOINT_ATTR_BULK, 64, NULL);
+	usbd_ep_setup(usbd_dev, 0x82, USB_ENDPOINT_ATTR_BULK, 64, cdcacm_data_tx_cb);
 	usbd_ep_setup(usbd_dev, 0x83, USB_ENDPOINT_ATTR_INTERRUPT, 16, NULL);
 	usbd_register_control_callback(
 				usbd_dev,
@@ -239,11 +304,6 @@ static void cdcacm_set_config(usbd_device *usbd_dev, uint16_t wValue) {
 void usb_isr(void) {
 	if(usb_dev)
 		usbd_poll(usb_dev);
-}
-
-/* TODO: enqueue, send upon \n ? */
-int usb_tx(const void *p, size_t n) {
-	return (usb_active && usb_dev) ? usbd_ep_write_packet(usb_dev, 0x82, p, n) : 0;
 }
 
 void usb_setup(void) {
