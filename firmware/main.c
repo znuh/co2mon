@@ -70,7 +70,7 @@ static void serial_printvals(readings_t *v) {
 		uart_tx(UART_SYS_CH, buf, strlen(buf));
 	}
 	if(TEMP_VALID(v)) {
-		char buf[16]="temp: +99°C ";
+		char buf[16]="temp: +99Â°C ";
 		i16_to_dec(v->temperature,buf+6,3,-1,0);
 		uart_tx(UART_SYS_CH, buf, strlen(buf));
 	}
