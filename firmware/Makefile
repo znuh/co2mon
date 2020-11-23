@@ -37,8 +37,7 @@ stm32: all
 	$(PREFIX)size $(ELF_FILE)
 
 stm32_flash: stm32 $(PROJECT).bin
-	echo ICANHAZBOOTLOADER > /dev/ttyACM0
-	sleep 2
+	(echo ICANHAZBOOTLOADER > /dev/ttyACM0 && sleep 2) || true
 	dfu-util -a 0 -s 0x08000000:leave -D $(PROJECT).bin
 
 linux:
