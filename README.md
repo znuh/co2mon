@@ -21,5 +21,3 @@ For this variant you need to solder a few 0805 resistors and 3x SOT-23 component
 
 ### STM32F042K6T6 
 Fot this variant you need to solder the LQFP-32 controller, a SOT-23 component, the micro-USB connector, a 1210 fuse and a few 0603 passives to side A of the PCB.
-
-## more documentation will follow in the next few days
