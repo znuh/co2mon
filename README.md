@@ -1,4 +1,5 @@
 # CO2 multimon
+![photo](https://user-images.githubusercontent.com/198567/226183986-bccb3734-a23c-44ee-b2fc-31e04bb7a7e7.jpeg)
 CO2 monitor with support for different sensors, displays and microcontrollers.
 
 Firmware and the printed circuit board include support for all of these components.
