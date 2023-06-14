@@ -96,9 +96,9 @@ static void gpio_setup(void) {
 	gpio_set(GPIOA, GPIO1);
 
 	/* I2C1 */
+	gpio_set(I2C_PORT, I2C_SCL|I2C_SDA);
 	gpio_set_output_options(I2C_PORT, GPIO_OTYPE_OD, GPIO_OSPEED_2MHZ, I2C_SCL|I2C_SDA);
 	gpio_mode_setup(I2C_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, I2C_SCL|I2C_SDA);
-	gpio_clear(I2C_PORT, I2C_SCL|I2C_SDA);
 
 	/* TFT nRST, A0 */
 	gpio_mode_setup(GPIOF, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO0 | GPIO1);
