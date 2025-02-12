@@ -23,7 +23,6 @@
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/usb/cdc.h>
 #include <libopencm3/cm3/nvic.h>
-#include <libopencm3/stm32/gpio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "utils.h"
@@ -221,7 +220,9 @@ static void cdcacm_data_rx_cb(usbd_device *usbd_dev, uint8_t ep) {
 	int len = usbd_ep_read_packet(usbd_dev, 0x01, buf, 64);
 	if((len >= (int)(sizeof(bl_string)-1)) && (!memcmp(buf,bl_string,sizeof(bl_string)-1))) {
 		usbd_disconnect(usbd_dev, true);
-		gpio_mode_setup(GPIOB, GPIO_MODE_INPUT, GPIO_PUPD_NONE, GPIO11 | GPIO12);
+		usb_dev = NULL;
+		usb_active = 0;
+		nvic_disable_irq(NVIC_USB_IRQ);
 		start_bootloader();
 	}
 	ep=ep;

@@ -423,6 +423,7 @@ __attribute__( ( long_call, section(".data#") ) ) void bl_ram_func(void) {   /* 
 }
 
 void start_bootloader(void) {
+	gpio_mode_setup(GPIOA, GPIO_MODE_INPUT, GPIO_PUPD_NONE, GPIO11 | GPIO12);
 	udelay(1024*1024*4);                /* wait a bit after USB disconnect - msleep would require the timer interrupt */
 	cm_disable_interrupts();
 	flash_unlock();
